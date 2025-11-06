@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .lotus { fill: #D4AF37; }
+      .cap { fill: #1E3A8A; }
+      .text { fill: #1E3A8A; font-family: Arial, sans-serif; font-weight: bold; }
+    </style>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="80" height="80" fill="white" rx="16"/>
+  
+  <!-- Lotus Flower -->
+  <g class="lotus" transform="translate(16, 12)">
+    <!-- Center -->
+    <circle cx="24" cy="24" r="9.6" fill="#D4AF37"/>
+    
+    <!-- Petals -->
+    <ellipse cx="24" cy="16" rx="6.4" ry="9.6" transform="rotate(0 24 24)"/>
+    <ellipse cx="24" cy="16" rx="6.4" ry="9.6" transform="rotate(45 24 24)"/>
+    <ellipse cx="24" cy="16" rx="6.4" ry="9.6" transform="rotate(-45 24 24)"/>
+    <ellipse cx="24" cy="16" rx="6.4" ry="9.6" transform="rotate(90 24 24)"/>
+    <ellipse cx="24" cy="16" rx="6.4" ry="9.6" transform="rotate(-90 24 24)"/>
+  </g>
+  
+  <!-- Graduation Cap -->
+  <g class="cap" transform="translate(20, 8)">
+    <rect x="8" y="4" width="24" height="6.4" rx="2"/>
+    <rect x="28" y="4" width="1.6" height="8" rx="1"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="40" y="68" text-anchor="middle" class="text" font-size="9.6">Padmai</text>
+</svg>

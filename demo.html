@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Padmai Authentication Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 36px;
+            font-weight: bold;
+            color: #2F6FED;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #666;
+        }
+
+        .form-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .input-container {
+            margin-bottom: 20px;
+        }
+
+        .label {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .input {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 16px;
+            background: #f8f9fa;
+            transition: border-color 0.2s;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: #2F6FED;
+        }
+
+        .button {
+            width: 100%;
+            background: #2F6FED;
+            color: #fff;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-bottom: 20px;
+        }
+
+        .button:hover {
+            background: #1e5bb8;
+        }
+
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .divider-line {
+            flex: 1;
+            height: 1px;
+            background: #ddd;
+        }
+
+        .divider-text {
+            margin: 0 16px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .quick-login-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .quick-login-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .quick-login-button {
+            display: flex;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .quick-login-button:hover {
+            background: #e9ecef;
+        }
+
+        .quick-login-icon {
+            font-size: 20px;
+            margin-right: 12px;
+        }
+
+        .quick-login-text {
+            font-size: 16px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .demo-banner {
+            background: #e3f2fd;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 16px;
+            border-left: 4px solid #2F6FED;
+        }
+
+        .demo-banner-text {
+            font-size: 12px;
+            color: #2F6FED;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .footer-text {
+            font-size: 16px;
+            color: #666;
+            margin-right: 4px;
+        }
+
+        .footer-link {
+            font-size: 16px;
+            color: #2F6FED;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .footer-link:hover {
+            text-decoration: underline;
+        }
+
+        .home-screen {
+            display: none;
+        }
+
+        .user-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .role-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .user-name {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .user-email {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .role-badge {
+            background: #2F6FED;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .child-info {
+            font-size: 14px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .demo-info {
+            background: #e3f2fd;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 30px;
+            border-left: 4px solid #2F6FED;
+        }
+
+        .demo-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2F6FED;
+            margin-bottom: 8px;
+        }
+
+        .demo-text {
+            font-size: 14px;
+            color: #555;
+            line-height: 20px;
+        }
+
+        .logout-button {
+            background: #dc3545;
+            color: #fff;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .logout-button:hover {
+            background: #c82333;
+        }
+
+        .error {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .success {
+            color: #28a745;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Screen -->
+        <div id="loginScreen">
+            <div class="header">
+                <div class="logo">🎓 Padmai</div>
+                <div class="subtitle">School Management System</div>
+            </div>
+
+            <div class="form-card">
+                <div class="form-title">Sign In</div>
+                
+                <div class="input-container">
+                    <label class="label" for="email">Email Address</label>
+                    <input type="email" id="email" class="input" placeholder="Enter your email">
+                </div>
+
+                <div class="input-container">
+                    <label class="label" for="password">Password</label>
+                    <input type="password" id="password" class="input" placeholder="Enter your password">
+                </div>
+
+                <button class="button" onclick="handleLogin()">Sign In</button>
+
+                <div class="divider">
+                    <div class="divider-line"></div>
+                    <div class="divider-text">or</div>
+                    <div class="divider-line"></div>
+                </div>
+
+                <div class="quick-login-title">Quick Login (Demo)</div>
+                
+                <div class="quick-login-buttons">
+                    <div class="quick-login-button" onclick="quickLogin('parent')">
+                        <span class="quick-login-icon">👨‍👩‍👧‍👦</span>
+                        <span class="quick-login-text">Login as Parent</span>
+                    </div>
+
+                    <div class="quick-login-button" onclick="quickLogin('teacher')">
+                        <span class="quick-login-icon">👩‍🏫</span>
+                        <span class="quick-login-text">Login as Teacher</span>
+                    </div>
+
+                    <div class="quick-login-button" onclick="quickLogin('schoolOwner')">
+                        <span class="quick-login-icon">🏫</span>
+                        <span class="quick-login-text">Login as School Owner</span>
+                    </div>
+                </div>
+
+                <div class="demo-banner">
+                    <div class="demo-banner-text">🎯 Demo Mode: All data is in-memory only</div>
+                </div>
+            </div>
+
+            <div class="footer">
+                <span class="footer-text">Don't have an account?</span>
+                <a href="#" class="footer-link" onclick="showRegister()">Sign Up</a>
+            </div>
+        </div>
+
+        <!-- Register Screen -->
+        <div id="registerScreen" style="display: none;">
+            <div class="header">
+                <div class="logo">🎓 Padmai</div>
+                <div class="subtitle">Create Your Account</div>
+            </div>
+
+            <div class="form-card">
+                <div class="form-title">Sign Up</div>
+                
+                <div class="input-container">
+                    <label class="label" for="regFullName">Full Name *</label>
+                    <input type="text" id="regFullName" class="input" placeholder="Enter your full name">
+                </div>
+
+                <div class="input-container">
+                    <label class="label" for="regEmail">Email Address *</label>
+                    <input type="email" id="regEmail" class="input" placeholder="Enter your email">
+                </div>
+
+                <div class="input-container">
+                    <label class="label" for="regPassword">Password *</label>
+                    <input type="password" id="regPassword" class="input" placeholder="Enter your password">
+                </div>
+
+                <div class="input-container">
+                    <label class="label" for="regConfirmPassword">Confirm Password *</label>
+                    <input type="password" id="regConfirmPassword" class="input" placeholder="Confirm your password">
+                </div>
+
+                <div class="input-container">
+                    <label class="label">Role *</label>
+                    <div style="display: flex; gap: 8px;">
+                        <div class="quick-login-button" onclick="selectRole('parent')" id="roleParent">
+                            <span class="quick-login-icon">👨‍👩‍👧‍👦</span>
+                            <span class="quick-login-text">Parent</span>
+                        </div>
+                        <div class="quick-login-button" onclick="selectRole('teacher')" id="roleTeacher">
+                            <span class="quick-login-icon">👩‍🏫</span>
+                            <span class="quick-login-text">Teacher</span>
+                        </div>
+                        <div class="quick-login-button" onclick="selectRole('schoolOwner')" id="roleSchoolOwner">
+                            <span class="quick-login-icon">🏫</span>
+                            <span class="quick-login-text">School Owner</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-container" id="childIdContainer" style="display: none;">
+                    <label class="label" for="childId">Child ID (Optional)</label>
+                    <input type="text" id="childId" class="input" placeholder="Enter your child's ID">
+                </div>
+
+                <button class="button" onclick="handleRegister()">Create Account</button>
+
+                <div class="demo-banner">
+                    <div class="demo-banner-text">🎯 Demo Mode: Account data is stored in-memory only</div>
+                </div>
+            </div>
+
+            <div class="footer">
+                <span class="footer-text">Already have an account?</span>
+                <a href="#" class="footer-link" onclick="showLogin()">Sign In</a>
+            </div>
+        </div>
+
+        <!-- Home Screen -->
+        <div id="homeScreen" class="home-screen">
+            <div class="header">
+                <div class="logo">🎓 Padmai</div>
+                <div class="subtitle">Welcome to your dashboard</div>
+            </div>
+
+            <div class="user-card">
+                <div class="role-icon" id="userRoleIcon">👤</div>
+                <div class="user-name" id="userName">User Name</div>
+                <div class="user-email" id="userEmail">user@example.com</div>
+                <div class="role-badge" id="userRole">Role</div>
+                <div class="child-info" id="childInfo" style="display: none;"></div>
+            </div>
+
+            <div class="demo-info">
+                <div class="demo-title">🎯 Demo Mode</div>
+                <div class="demo-text">
+                    This is a demonstration of the Padmai authentication system.
+                    All data is stored in-memory and will reset when the page is reloaded.
+                </div>
+            </div>
+
+            <button class="logout-button" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        // Demo data
+        const users = [
+            {
+                id: "user-1",
+                fullName: "Sarah Johnson",
+                email: "parent@padmai.demo",
+                password: "Demo@123",
+                role: "parent",
+                childId: "student-1"
+            },
+            {
+                id: "user-2",
+                fullName: "Michael Chen",
+                email: "teacher@padmai.demo",
+                password: "Demo@123",
+                role: "teacher"
+            },
+            {
+                id: "user-3",
+                fullName: "Dr. Emily Rodriguez",
+                email: "owner@padmai.demo",
+                password: "Demo@123",
+                role: "schoolOwner"
+            }
+        ];
+
+        let currentUser = null;
+        let selectedRole = 'parent';
+
+        function showLogin() {
+            document.getElementById('loginScreen').style.display = 'block';
+            document.getElementById('registerScreen').style.display = 'none';
+            document.getElementById('homeScreen').style.display = 'none';
+        }
+
+        function showRegister() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('registerScreen').style.display = 'block';
+            document.getElementById('homeScreen').style.display = 'none';
+        }
+
+        function showHome() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('registerScreen').style.display = 'none';
+            document.getElementById('homeScreen').style.display = 'block';
+        }
+
+        function selectRole(role) {
+            selectedRole = role;
+            
+            // Update button styles
+            document.querySelectorAll('[id^="role"]').forEach(btn => {
+                btn.style.backgroundColor = '#f8f9fa';
+                btn.style.borderColor = '#e9ecef';
+            });
+            
+            document.getElementById('role' + role.charAt(0).toUpperCase() + role.slice(1)).style.backgroundColor = '#2F6FED';
+            document.getElementById('role' + role.charAt(0).toUpperCase() + role.slice(1)).style.borderColor = '#2F6FED';
+            document.getElementById('role' + role.charAt(0).toUpperCase() + role.slice(1)).style.color = '#fff';
+
+            // Show/hide child ID input
+            const childIdContainer = document.getElementById('childIdContainer');
+            if (role === 'parent') {
+                childIdContainer.style.display = 'block';
+            } else {
+                childIdContainer.style.display = 'none';
+            }
+        }
+
+        function quickLogin(role) {
+            const credentials = {
+                parent: { email: 'parent@padmai.demo', password: 'Demo@123' },
+                teacher: { email: 'teacher@padmai.demo', password: 'Demo@123' },
+                schoolOwner: { email: 'owner@padmai.demo', password: 'Demo@123' }
+            };
+
+            document.getElementById('email').value = credentials[role].email;
+            document.getElementById('password').value = credentials[role].password;
+            
+            handleLogin();
+        }
+
+        function handleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            const user = users.find(u => u.email === email && u.password === password);
+            
+            if (user) {
+                currentUser = user;
+                updateHomeScreen();
+                showHome();
+            } else {
+                alert('Invalid email or password');
+            }
+        }
+
+        function handleRegister() {
+            const fullName = document.getElementById('regFullName').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+            const childId = document.getElementById('childId').value;
+
+            if (!fullName || !email || !password || !confirmPassword) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match');
+                return;
+            }
+
+            if (password.length < 6) {
+                alert('Password must be at least 6 characters long');
+                return;
+            }
+
+            // Check if user already exists
+            if (users.find(u => u.email === email)) {
+                alert('User with this email already exists');
+                return;
+            }
+
+            // Create new user
+            const newUser = {
+                id: 'user-' + Date.now(),
+                fullName: fullName,
+                email: email,
+                password: password,
+                role: selectedRole,
+                childId: selectedRole === 'parent' ? childId : undefined
+            };
+
+            users.push(newUser);
+            currentUser = newUser;
+            updateHomeScreen();
+            showHome();
+            alert('Registration successful! Welcome to Padmai!');
+        }
+
+        function updateHomeScreen() {
+            if (!currentUser) return;
+
+            const roleIcons = {
+                parent: '👨‍👩‍👧‍👦',
+                teacher: '👩‍🏫',
+                schoolOwner: '🏫'
+            };
+
+            const roleNames = {
+                parent: 'Parent',
+                teacher: 'Teacher',
+                schoolOwner: 'School Owner'
+            };
+
+            document.getElementById('userRoleIcon').textContent = roleIcons[currentUser.role];
+            document.getElementById('userName').textContent = currentUser.fullName;
+            document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('userRole').textContent = roleNames[currentUser.role];
+
+            const childInfo = document.getElementById('childInfo');
+            if (currentUser.childId) {
+                childInfo.textContent = `Child ID: ${currentUser.childId}`;
+                childInfo.style.display = 'block';
+            } else {
+                childInfo.style.display = 'none';
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            showLogin();
+        }
+
+        // Initialize
+        showLogin();
+    </script>
+</body>
+</html>

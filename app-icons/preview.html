@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Padmai App Icons Preview</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #1E3A8A;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section h2 {
+            color: #1E3A8A;
+            border-bottom: 2px solid #D4AF37;
+            padding-bottom: 10px;
+        }
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .icon-item {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .icon-item:hover {
+            border-color: #D4AF37;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 15px;
+            background: white;
+            border-radius: 20%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .lotus {
+            width: 50px;
+            height: 50px;
+            position: relative;
+            margin-bottom: 5px;
+        }
+        .lotus-center {
+            width: 20px;
+            height: 20px;
+            background: #D4AF37;
+            border-radius: 50%;
+            position: absolute;
+            top: 15px;
+            left: 15px;
+        }
+        .lotus-petal {
+            position: absolute;
+            width: 15px;
+            height: 25px;
+            background: #D4AF37;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+        }
+        .lotus-petal-1 { top: 10px; left: 17px; transform: rotate(0deg); }
+        .lotus-petal-2 { top: 10px; left: 17px; transform: rotate(45deg); }
+        .lotus-petal-3 { top: 10px; left: 17px; transform: rotate(-45deg); }
+        .lotus-petal-4 { top: 10px; left: 17px; transform: rotate(90deg); }
+        .lotus-petal-5 { top: 10px; left: 17px; transform: rotate(-90deg); }
+        .graduation-cap {
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 8px;
+            background: #1E3A8A;
+            border-radius: 2px;
+        }
+        .cap-tassel {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 3px;
+            height: 6px;
+            background: #1E3A8A;
+            border-radius: 1px;
+        }
+        .text {
+            font-weight: bold;
+            color: #1E3A8A;
+            font-size: 10px;
+            margin-top: 3px;
+        }
+        .icon-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .icon-size {
+            font-size: 12px;
+            color: #666;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        .instructions h3 {
+            color: #1E3A8A;
+            margin-top: 0;
+        }
+        .instructions ol {
+            color: #333;
+            line-height: 1.6;
+        }
+        .instructions code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Padmai App Icons</h1>
+        <p class="subtitle">Complete icon set for all device sizes</p>
+        
+        <div class="section">
+            <h2>📱 Android Icons</h2>
+            <div class="icon-grid">
+                <div class="icon-item">
+                    <div class="icon">
+                        <div class="lotus">
+                            <div class="lotus-center"></div>
+                            <div class="lotus-petal lotus-petal-1"></div>
+                            <div class="lotus-petal lotus-petal-2"></div>
+                            <div class="lotus-petal lotus-petal-3"></div>
+                            <div class="lotus-petal lotus-petal-4"></div>
+                            <div class="lotus-petal lotus-petal-5"></div>
+                            <div class="graduation-cap">
+                                <div class="cap-tassel"></div>
+                            </div>
+                        </div>
+                        <div class="text">Padmai</div>
+                    </div>
+                    <div class="icon-label">MDPI</div>
+                    <div class="icon-size">48×48px</div>
+                </div>
+                
+                <div class="icon-item">
+                    <div class="icon">
+                        <div class="lotus">
+                            <div class="lotus-center"></div>
+                            <div class="lotus-petal lotus-petal-1"></div>
+                            <div class="lotus-petal lotus-petal-2"></div>
+                            <div class="lotus-petal lotus-petal-3"></div>
+                            <div class="lotus-petal lotus-petal-4"></div>
+                            <div class="lotus-petal lotus-petal-5"></div>
+                            <div class="graduation-cap">
+                                <div class="cap-tassel"></div>
+                            </div>
+                        </div>
+                        <div class="text">Padmai</div>
+                    </div>
+                    <div class="icon-label">HDPI</div>
+                    <div class="icon-size">72×72px</div>
+                </div>
+                
+                <div class="icon-item">
+                    <div class="icon">
+                        <div class="lotus">
+                            <div class="lotus-center"></div>
+                            <div class="lotus-petal lotus-petal-1"></div>
+                            <div class="lotus-petal lotus-petal-2"></div>
+                            <div class="lotus-petal lotus-petal-3"></div>
+                            <div class="lotus-petal lotus-petal-4"></div>
+                            <div class="lotus-petal lotus-petal-5"></div>
+                            <div class="graduation-cap">
+                                <div class="cap-tassel"></div>
+                            </div>
+                        </div>
+                        <div class="text">Padmai</div>
+                    </div>
+                    <div class="icon-label">XHDPI</div>
+                    <div class="icon-size">96×96px</div>
+                </div>
+                
+                <div class="icon-item">
+                    <div class="icon">
+                        <div class="lotus">
+                            <div class="lotus-center"></div>
+                            <div class="lotus-petal lotus-petal-1"></div>
+                            <div class="lotus-petal lotus-petal-2"></div>
+                            <div class="lotus-petal lotus-petal-3"></div>
+                            <div class="lotus-petal lotus-petal-4"></div>
+                            <div class="lotus-petal lotus-petal-5"></div>
+                            <div class="graduation-cap">
+                                <div class="cap-tassel"></div>
+                            </div>
+                        </div>
+                        <div class="text">Padmai</div>
+                    </div>
+                    <div class="icon-label">XXHDPI</div>
+                    <div class="icon-size">144×144px</div>
+                </div>
+                
+                <div class="icon-item">
+                    <div class="icon">
+                        <div class="lotus">
+                            <div class="lotus-center"></div>
+                            <div class="lotus-petal lotus-petal-1"></div>
+                            <div class="lotus-petal lotus-petal-2"></div>
+                            <div class="lotus-petal lotus-petal-3"></div>
+                            <div class="lotus-petal lotus-petal-4"></div>
+                            <div class="lotus-petal lotus-petal-5"></div>
+                            <div class="graduation-cap">
+                                <div class="cap-tassel"></div>
+                            </div>
+                        </div>
+                        <div class="text">Padmai</div>
+                    </div>
+                    <div class="icon-label">XXXHDPI</div>
+                    <div class="icon-size">192×192px</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🍎 iOS Icons</h2>
+            <div class="icon-grid">
+                <div class="icon-item">
+                    <div class="icon">
+                        <div class="lotus">
+                            <div class="lotus-center"></div>
+                            <div class="lotus-petal lotus-petal-1"></div>
+                            <div class="lotus-petal lotus-petal-2"></div>
+                            <div class="lotus-petal lotus-petal-3"></div>
+                            <div class="lotus-petal lotus-petal-4"></div>
+                            <div class="lotus-petal lotus-petal-5"></div>
+                            <div class="graduation-cap">
+                                <div class="cap-tassel"></div>
+                            </div>
+                        </div>
+                        <div class="text">Padmai</div>
+                    </div>
+                    <div class="icon-label">20pt</div>
+                    <div class="icon-size">20×20, 40×40px</div>
+                </div>
+                
+                <div class="icon-item">
+                    <div class="icon">
+                        <div class="lotus">
+                            <div class="lotus-center"></div>
+                            <div class="lotus-petal lotus-petal-1"></div>
+                            <div class="lotus-petal lotus-petal-2"></div>
+                            <div class="lotus-petal lotus-petal-3"></div>
+                            <div class="lotus-petal lotus-petal-4"></div>
+                            <div class="lotus-petal lotus-petal-5"></div>
+                            <div class="graduation-cap">
+                                <div class="cap-tassel"></div>
+                            </div>
+                        </div>
+                        <div class="text">Padmai</div>
+                    </div>
+                    <div class="icon-label">29pt</div>
+                    <div class="icon-size">29×29, 58×58px</div>
+                </div>
+                
+                <div class="icon-item">
+                    <div class="icon">
+                        <div class="lotus">
+                            <div class="lotus-center"></div>
+                            <div class="lotus-petal lotus-petal-1"></div>
+                            <div class="lotus-petal lotus-petal-2"></div>
+                            <div class="lotus-petal lotus-petal-3"></div>
+                            <div class="lotus-petal lotus-petal-4"></div>
+                            <div class="lotus-petal lotus-petal-5"></div>
+                            <div class="graduation-cap">
+                                <div class="cap-tassel"></div>
+                            </div>
+                        </div>
+                        <div class="text">Padmai</div>
+                    </div>
+                    <div class="icon-label">40pt</div>
+                    <div class="icon-size">40×40, 80×80px</div>
+                </div>
+                
+                <div class="icon-item">
+                    <div class="icon">
+                        <div class="lotus">
+                            <div class="lotus-center"></div>
+                            <div class="lotus-petal lotus-petal-1"></div>
+                            <div class="lotus-petal lotus-petal-2"></div>
+                            <div class="lotus-petal lotus-petal-3"></div>
+                            <div class="lotus-petal lotus-petal-4"></div>
+                            <div class="lotus-petal lotus-petal-5"></div>
+                            <div class="graduation-cap">
+                                <div class="cap-tassel"></div>
+                            </div>
+                        </div>
+                        <div class="text">Padmai</div>
+                    </div>
+                    <div class="icon-label">60pt</div>
+                    <div class="icon-size">60×60, 120×120px</div>
+                </div>
+                
+                <div class="icon-item">
+                    <div class="icon">
+                        <div class="lotus">
+                            <div class="lotus-center"></div>
+                            <div class="lotus-petal lotus-petal-1"></div>
+                            <div class="lotus-petal lotus-petal-2"></div>
+                            <div class="lotus-petal lotus-petal-3"></div>
+                            <div class="lotus-petal lotus-petal-4"></div>
+                            <div class="lotus-petal lotus-petal-5"></div>
+                            <div class="graduation-cap">
+                                <div class="cap-tassel"></div>
+                            </div>
+                        </div>
+                        <div class="text">Padmai</div>
+                    </div>
+                    <div class="icon-label">76pt</div>
+                    <div class="icon-size">76×76, 152×152px</div>
+                </div>
+                
+                <div class="icon-item">
+                    <div class="icon">
+                        <div class="lotus">
+                            <div class="lotus-center"></div>
+                            <div class="lotus-petal lotus-petal-1"></div>
+                            <div class="lotus-petal lotus-petal-2"></div>
+                            <div class="lotus-petal lotus-petal-3"></div>
+                            <div class="lotus-petal lotus-petal-4"></div>
+                            <div class="lotus-petal lotus-petal-5"></div>
+                            <div class="graduation-cap">
+                                <div class="cap-tassel"></div>
+                            </div>
+                        </div>
+                        <div class="text">Padmai</div>
+                    </div>
+                    <div class="icon-label">83.5pt</div>
+                    <div class="icon-size">167×167px</div>
+                </div>
+                
+                <div class="icon-item">
+                    <div class="icon">
+                        <div class="lotus">
+                            <div class="lotus-center"></div>
+                            <div class="lotus-petal lotus-petal-1"></div>
+                            <div class="lotus-petal lotus-petal-2"></div>
+                            <div class="lotus-petal lotus-petal-3"></div>
+                            <div class="lotus-petal lotus-petal-4"></div>
+                            <div class="lotus-petal lotus-petal-5"></div>
+                            <div class="graduation-cap">
+                                <div class="cap-tassel"></div>
+                            </div>
+                        </div>
+                        <div class="text">Padmai</div>
+                    </div>
+                    <div class="icon-label">1024pt</div>
+                    <div class="icon-size">1024×1024px (App Store)</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>🚀 Quick Implementation</h3>
+            <ol>
+                <li><strong>Convert to PNG:</strong> Run <code>./implement-icons.sh</code> to convert SVG to PNG</li>
+                <li><strong>Android:</strong> Copy PNG files to <code>android/app/src/main/res/mipmap-*/</code></li>
+                <li><strong>iOS:</strong> Add PNG files to Xcode Images.xcassets AppIcon set</li>
+                <li><strong>Test:</strong> Build and run your app to see the new icons</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>

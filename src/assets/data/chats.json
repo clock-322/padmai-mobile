@@ -1,0 +1,112 @@
+[
+  {
+    "id": "chat_1",
+    "threadId": "thread_1",
+    "studentId": "s_1",
+    "parentId": "u_parent_1",
+    "teacherId": "teacher_1",
+    "lastMessage": "Thank you for the update!",
+    "lastMessageTime": "2025-01-20T14:30:00.000Z",
+    "unreadCount": 2,
+    "isActive": true
+  },
+  {
+    "id": "chat_2",
+    "threadId": "thread_2",
+    "studentId": "s_1",
+    "parentId": "u_parent_1",
+    "teacherId": "teacher_2",
+    "lastMessage": "Yes, I'll make sure she brings her art supplies tomorrow.",
+    "lastMessageTime": "2025-01-20T11:45:00.000Z",
+    "unreadCount": 0,
+    "isActive": true
+  },
+  {
+    "id": "chat_3",
+    "threadId": "thread_3",
+    "studentId": "s_1",
+    "parentId": "u_parent_1",
+    "teacherId": "teacher_3",
+    "lastMessage": "The field trip permission form is due by Friday.",
+    "lastMessageTime": "2025-01-19T16:20:00.000Z",
+    "unreadCount": 1,
+    "isActive": true
+  },
+  {
+    "id": "chat_4",
+    "threadId": "thread_4",
+    "studentId": "s_1",
+    "parentId": "u_parent_1",
+    "teacherId": "teacher_4",
+    "lastMessage": "Great! I'll see you at the parent-teacher conference.",
+    "lastMessageTime": "2025-01-18T15:30:00.000Z",
+    "unreadCount": 0,
+    "isActive": false
+  },
+  {
+    "id": "chat_5",
+    "threadId": "thread_5",
+    "studentId": "s_1",
+    "parentId": "u_parent_1",
+    "teacherId": "teacher_5",
+    "lastMessage": "The library book is overdue. Please return it soon.",
+    "lastMessageTime": "2025-01-17T09:15:00.000Z",
+    "unreadCount": 0,
+    "isActive": true
+  },
+  {
+    "id": "chat_6",
+    "threadId": "thread_6",
+    "studentId": "s_2",
+    "parentId": "u_parent_2",
+    "teacherId": "teacher_1",
+    "lastMessage": "How is my child doing in math?",
+    "lastMessageTime": "2025-01-20T10:15:00.000Z",
+    "unreadCount": 0,
+    "isActive": false
+  },
+  {
+    "id": "chat_7",
+    "threadId": "thread_7",
+    "studentId": "s_2",
+    "parentId": "u_parent_2",
+    "teacherId": "teacher_2",
+    "lastMessage": "The science project is due next week",
+    "lastMessageTime": "2025-01-19T16:45:00.000Z",
+    "unreadCount": 1,
+    "isActive": true
+  },
+  {
+    "id": "chat_8",
+    "threadId": "thread_8",
+    "studentId": "s_3",
+    "parentId": "u_parent_3",
+    "teacherId": "teacher_1",
+    "lastMessage": "Thank you for the detailed feedback!",
+    "lastMessageTime": "2025-01-19T14:20:00.000Z",
+    "unreadCount": 0,
+    "isActive": true
+  },
+  {
+    "id": "chat_9",
+    "threadId": "thread_9",
+    "studentId": "s_3",
+    "parentId": "u_parent_3",
+    "teacherId": "teacher_3",
+    "lastMessage": "The music recital is scheduled for next month.",
+    "lastMessageTime": "2025-01-18T12:30:00.000Z",
+    "unreadCount": 0,
+    "isActive": true
+  },
+  {
+    "id": "chat_10",
+    "threadId": "thread_10",
+    "studentId": "s_1",
+    "parentId": "u_parent_1",
+    "teacherId": "teacher_6",
+    "lastMessage": "The sports day is next Friday. Don't forget the permission slip!",
+    "lastMessageTime": "2025-01-16T08:45:00.000Z",
+    "unreadCount": 0,
+    "isActive": true
+  }
+]

@@ -1,0 +1,102 @@
+[
+  {
+    "id": "s_1",
+    "name": "Alex Johnson",
+    "classId": "class_1",
+    "parentId": "u_parent_1",
+    "grade": "Grade 5",
+    "class": "5A",
+    "teacher": "Ms. Johnson",
+    "avatar": "👦"
+  },
+  {
+    "id": "s_2",
+    "name": "Maya Patel",
+    "classId": "class_1",
+    "parentId": "u_parent_2",
+    "grade": "Grade 5",
+    "class": "5A",
+    "teacher": "Ms. Johnson",
+    "avatar": "👧"
+  },
+  {
+    "id": "s_3",
+    "name": "Sarah Chen",
+    "classId": "class_2",
+    "parentId": "u_parent_3",
+    "grade": "Grade 3",
+    "class": "3B",
+    "teacher": "Mr. Smith",
+    "avatar": "👧"
+  },
+  {
+    "id": "s_4",
+    "name": "Michael Rodriguez",
+    "classId": "class_3",
+    "parentId": "u_parent_4",
+    "grade": "Grade 4",
+    "class": "4A",
+    "teacher": "Mrs. Davis",
+    "avatar": "👦"
+  },
+  {
+    "id": "s_5",
+    "name": "Priya Sharma",
+    "classId": "class_2",
+    "parentId": "u_parent_5",
+    "grade": "Grade 3",
+    "class": "3B",
+    "teacher": "Mr. Smith",
+    "avatar": "👧"
+  },
+  {
+    "id": "s_6",
+    "name": "James Wilson",
+    "classId": "class_4",
+    "parentId": "u_parent_6",
+    "grade": "Grade 6",
+    "class": "6A",
+    "teacher": "Mr. Anderson",
+    "avatar": "👦"
+  },
+  {
+    "id": "s_7",
+    "name": "Emma Brown",
+    "classId": "class_5",
+    "parentId": "u_parent_7",
+    "grade": "Grade 8",
+    "class": "8B",
+    "teacher": "Ms. Taylor",
+    "avatar": "👧"
+  },
+  {
+    "id": "s_8",
+    "name": "Ryan Kumar",
+    "classId": "class_1",
+    "parentId": "u_parent_8",
+    "grade": "Grade 5",
+    "class": "5A",
+    "teacher": "Ms. Johnson",
+    "avatar": "👦"
+  },
+  {
+    "id": "s_9",
+    "name": "Sofia Martinez",
+    "classId": "class_6",
+    "parentId": "u_parent_9",
+    "grade": "Grade 2",
+    "class": "2A",
+    "teacher": "Ms. Garcia",
+    "avatar": "👧"
+  },
+  {
+    "id": "s_10",
+    "name": "Aarav Singh",
+    "classId": "class_7",
+    "parentId": "u_parent_10",
+    "grade": "Grade 7",
+    "class": "7C",
+    "teacher": "Mr. Kumar",
+    "avatar": "👦"
+  }
+]

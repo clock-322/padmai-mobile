@@ -1,0 +1,198 @@
+[
+  {
+    "id": "payment-1",
+    "parentId": "u_parent_1",
+    "studentId": "s_1",
+    "amount": 2500,
+    "dueDate": "2025-01-15",
+    "status": "paid",
+    "paidOn": "2025-01-10",
+    "reference": "TXN001234",
+    "description": "Monthly School Fees - January 2025"
+  },
+  {
+    "id": "payment-2",
+    "parentId": "u_parent_1",
+    "studentId": "s_1",
+    "amount": 180,
+    "dueDate": "2025-01-20",
+    "status": "paid",
+    "paidOn": "2025-01-18",
+    "reference": "TXN001235",
+    "description": "Transportation Fees - January 2025"
+  },
+  {
+    "id": "payment-3",
+    "parentId": "u_parent_1",
+    "studentId": "s_1",
+    "amount": 120,
+    "dueDate": "2025-01-25",
+    "status": "paid",
+    "paidOn": "2025-01-22",
+    "reference": "TXN001236",
+    "description": "Library & Computer Lab Fees"
+  },
+  {
+    "id": "payment-4",
+    "parentId": "u_parent_1",
+    "studentId": "s_1",
+    "amount": 2500,
+    "dueDate": "2025-02-15",
+    "status": "pending",
+    "description": "Monthly School Fees - February 2025"
+  },
+  {
+    "id": "payment-5",
+    "parentId": "u_parent_1",
+    "studentId": "s_1",
+    "amount": 180,
+    "dueDate": "2025-02-20",
+    "status": "pending",
+    "description": "Transportation Fees - February 2025"
+  },
+  {
+    "id": "payment-6",
+    "parentId": "u_parent_1",
+    "studentId": "s_1",
+    "amount": 300,
+    "dueDate": "2025-02-28",
+    "status": "pending",
+    "description": "Annual Sports Equipment Fee"
+  },
+  {
+    "id": "payment-7",
+    "parentId": "u_parent_1",
+    "studentId": "s_1",
+    "amount": 150,
+    "dueDate": "2025-01-30",
+    "status": "overdue",
+    "description": "Late Payment Fee - December 2024"
+  },
+  {
+    "id": "payment-8",
+    "parentId": "u_parent_1",
+    "studentId": "s_1",
+    "amount": 500,
+    "dueDate": "2025-03-15",
+    "status": "pending",
+    "description": "Annual Development Fund"
+  },
+  {
+    "id": "payment-9",
+    "parentId": "u_parent_1",
+    "studentId": "s_1",
+    "amount": 200,
+    "dueDate": "2025-01-10",
+    "status": "paid",
+    "paidOn": "2025-01-08",
+    "reference": "TXN001237",
+    "description": "Examination Fees - Mid Term"
+  },
+  {
+    "id": "payment-10",
+    "parentId": "u_parent_1",
+    "studentId": "s_1",
+    "amount": 100,
+    "dueDate": "2025-02-05",
+    "status": "pending",
+    "description": "Art & Craft Supplies"
+  },
+  {
+    "id": "payment-11",
+    "parentId": "u_parent_2",
+    "studentId": "s_2",
+    "amount": 2200,
+    "dueDate": "2025-01-15",
+    "status": "paid",
+    "paidOn": "2025-01-12",
+    "reference": "TXN001238",
+    "description": "Monthly School Fees - January 2025"
+  },
+  {
+    "id": "payment-12",
+    "parentId": "u_parent_2",
+    "studentId": "s_2",
+    "amount": 160,
+    "dueDate": "2025-01-20",
+    "status": "paid",
+    "paidOn": "2025-01-19",
+    "reference": "TXN001239",
+    "description": "Transportation Fees - January 2025"
+  },
+  {
+    "id": "payment-13",
+    "parentId": "u_parent_2",
+    "studentId": "s_2",
+    "amount": 2200,
+    "dueDate": "2025-02-15",
+    "status": "pending",
+    "description": "Monthly School Fees - February 2025"
+  },
+  {
+    "id": "payment-14",
+    "parentId": "u_parent_2",
+    "studentId": "s_2",
+    "amount": 250,
+    "dueDate": "2025-02-10",
+    "status": "pending",
+    "description": "Science Lab Equipment Fee"
+  },
+  {
+    "id": "payment-15",
+    "parentId": "u_parent_3",
+    "studentId": "s_3",
+    "amount": 1800,
+    "dueDate": "2025-01-15",
+    "status": "paid",
+    "paidOn": "2025-01-14",
+    "reference": "TXN001240",
+    "description": "Monthly School Fees - January 2025"
+  },
+  {
+    "id": "payment-16",
+    "parentId": "u_parent_3",
+    "studentId": "s_3",
+    "amount": 1800,
+    "dueDate": "2025-02-15",
+    "status": "pending",
+    "description": "Monthly School Fees - February 2025"
+  },
+  {
+    "id": "payment-17",
+    "parentId": "u_parent_3",
+    "studentId": "s_3",
+    "amount": 400,
+    "dueDate": "2025-02-20",
+    "status": "pending",
+    "description": "Music & Dance Classes Fee"
+  },
+  {
+    "id": "payment-18",
+    "parentId": "u_parent_1",
+    "studentId": "s_1",
+    "amount": 80,
+    "dueDate": "2025-01-05",
+    "status": "paid",
+    "paidOn": "2025-01-03",
+    "reference": "TXN001241",
+    "description": "Student ID Card Fee"
+  },
+  {
+    "id": "payment-19",
+    "parentId": "u_parent_1",
+    "studentId": "s_1",
+    "amount": 350,
+    "dueDate": "2025-03-01",
+    "status": "pending",
+    "description": "Annual Medical Checkup Fee"
+  },
+  {
+    "id": "payment-20",
+    "parentId": "u_parent_2",
+    "studentId": "s_2",
+    "amount": 120,
+    "dueDate": "2025-01-30",
+    "status": "overdue",
+    "description": "Late Payment Penalty"
+  }
+]

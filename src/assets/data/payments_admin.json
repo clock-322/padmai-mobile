@@ -1,0 +1,96 @@
+[
+  {
+    "id": "pay_1",
+    "parentId": "u_parent_1",
+    "parentName": "Rita Singh",
+    "studentId": "s_1",
+    "studentName": "Aarav Patel",
+    "amount": 1500,
+    "dueDate": "2025-10-10",
+    "status": "paid",
+    "paidOn": "2025-10-11",
+    "reference": "BANK-REF-123",
+    "reminders": 0
+  },
+  {
+    "id": "pay_2",
+    "parentId": "u_parent_2",
+    "parentName": "Karan Mehta",
+    "studentId": "s_2",
+    "studentName": "Meera Shah",
+    "amount": 1500,
+    "dueDate": "2025-11-01",
+    "status": "due",
+    "reminders": 0
+  },
+  {
+    "id": "pay_3",
+    "parentId": "u_parent_3",
+    "parentName": "Priya Sharma",
+    "studentId": "s_3",
+    "studentName": "Rohan Kumar",
+    "amount": 1500,
+    "dueDate": "2025-10-15",
+    "status": "overdue",
+    "reminders": 2
+  },
+  {
+    "id": "pay_4",
+    "parentId": "u_parent_4",
+    "parentName": "Vikram Joshi",
+    "studentId": "s_4",
+    "studentName": "Ananya Gupta",
+    "amount": 1500,
+    "dueDate": "2025-11-15",
+    "status": "due",
+    "reminders": 0
+  },
+  {
+    "id": "pay_5",
+    "parentId": "u_parent_5",
+    "parentName": "Sunita Reddy",
+    "studentId": "s_5",
+    "studentName": "Arjun Singh",
+    "amount": 1500,
+    "dueDate": "2025-10-20",
+    "status": "paid",
+    "paidOn": "2025-10-18",
+    "reference": "UPI-REF-456",
+    "reminders": 0
+  },
+  {
+    "id": "pay_6",
+    "parentId": "u_parent_6",
+    "parentName": "Rajesh Verma",
+    "studentId": "s_6",
+    "studentName": "Kavya Nair",
+    "amount": 1500,
+    "dueDate": "2025-10-25",
+    "status": "overdue",
+    "reminders": 1
+  },
+  {
+    "id": "pay_7",
+    "parentId": "u_parent_7",
+    "parentName": "Neha Agarwal",
+    "studentId": "s_7",
+    "studentName": "Rishi Patel",
+    "amount": 1500,
+    "dueDate": "2025-11-05",
+    "status": "due",
+    "reminders": 0
+  },
+  {
+    "id": "pay_8",
+    "parentId": "u_parent_8",
+    "parentName": "Amit Desai",
+    "studentId": "s_8",
+    "studentName": "Sneha Iyer",
+    "amount": 1500,
+    "dueDate": "2025-10-30",
+    "status": "paid",
+    "paidOn": "2025-10-28",
+    "reference": "CARD-REF-789",
+    "reminders": 0
+  }
+]

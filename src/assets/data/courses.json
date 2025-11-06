@@ -1,0 +1,222 @@
+[
+  {
+    "id": "course_1",
+    "name": "Mathematics Grade 1",
+    "subject": "Mathematics",
+    "grade": "1",
+    "teacherId": "teacher_1",
+    "classId": "class_1",
+    "modules": [
+      {
+        "id": "module_1",
+        "name": "Basic Addition",
+        "description": "Learning to add numbers 1-10",
+        "status": "completed"
+      },
+      {
+        "id": "module_2",
+        "name": "Basic Subtraction",
+        "description": "Learning to subtract numbers 1-10",
+        "status": "in_progress"
+      }
+    ]
+  },
+  {
+    "id": "course_2",
+    "name": "Science Grade 2",
+    "subject": "Science",
+    "grade": "2",
+    "teacherId": "teacher_2",
+    "classId": "class_2",
+    "modules": [
+      {
+        "id": "module_3",
+        "name": "Plants and Animals",
+        "description": "Understanding living things",
+        "status": "completed"
+      },
+      {
+        "id": "module_4",
+        "name": "Weather Patterns",
+        "description": "Learning about different weather conditions",
+        "status": "completed"
+      }
+    ]
+  },
+  {
+    "id": "course_3",
+    "name": "English Grade 3",
+    "subject": "English",
+    "grade": "3",
+    "teacherId": "teacher_3",
+    "classId": "class_3",
+    "modules": [
+      {
+        "id": "module_5",
+        "name": "Reading Comprehension",
+        "description": "Understanding and analyzing texts",
+        "status": "in_progress"
+      },
+      {
+        "id": "module_6",
+        "name": "Creative Writing",
+        "description": "Writing stories and essays",
+        "status": "upcoming"
+      }
+    ]
+  },
+  {
+    "id": "course_4",
+    "name": "History Grade 4",
+    "subject": "History",
+    "grade": "4",
+    "teacherId": "teacher_4",
+    "classId": "class_4",
+    "modules": [
+      {
+        "id": "module_7",
+        "name": "Ancient India",
+        "description": "Studying ancient Indian civilizations",
+        "status": "completed"
+      },
+      {
+        "id": "module_8",
+        "name": "Medieval Period",
+        "description": "Understanding medieval history",
+        "status": "in_progress"
+      }
+    ]
+  },
+  {
+    "id": "course_5",
+    "name": "Geography Grade 5",
+    "subject": "Geography",
+    "grade": "5",
+    "teacherId": "teacher_5",
+    "classId": "class_1",
+    "modules": [
+      {
+        "id": "module_9",
+        "name": "Physical Geography",
+        "description": "Mountains, rivers, and landforms",
+        "status": "in_progress"
+      },
+      {
+        "id": "module_10",
+        "name": "Political Geography",
+        "description": "States, capitals, and countries",
+        "status": "upcoming"
+      }
+    ]
+  },
+  {
+    "id": "course_6",
+    "name": "Computer Science Grade 6",
+    "subject": "Computer Science",
+    "grade": "6",
+    "teacherId": "teacher_6",
+    "classId": "class_4",
+    "modules": [
+      {
+        "id": "module_11",
+        "name": "Introduction to Programming",
+        "description": "Basics of coding and algorithms",
+        "status": "completed"
+      },
+      {
+        "id": "module_12",
+        "name": "Web Development",
+        "description": "Building websites with HTML and CSS",
+        "status": "in_progress"
+      }
+    ]
+  },
+  {
+    "id": "course_7",
+    "name": "Mathematics Grade 7",
+    "subject": "Mathematics",
+    "grade": "7",
+    "teacherId": "teacher_1",
+    "classId": "class_7",
+    "modules": [
+      {
+        "id": "module_13",
+        "name": "Algebra Fundamentals",
+        "description": "Variables, expressions, and equations",
+        "status": "in_progress"
+      },
+      {
+        "id": "module_14",
+        "name": "Geometry Basics",
+        "description": "Shapes, angles, and measurements",
+        "status": "upcoming"
+      }
+    ]
+  },
+  {
+    "id": "course_8",
+    "name": "Science Grade 8",
+    "subject": "Science",
+    "grade": "8",
+    "teacherId": "teacher_2",
+    "classId": "class_5",
+    "modules": [
+      {
+        "id": "module_15",
+        "name": "Physics Basics",
+        "description": "Force, motion, and energy",
+        "status": "completed"
+      },
+      {
+        "id": "module_16",
+        "name": "Chemistry Introduction",
+        "description": "Elements, compounds, and reactions",
+        "status": "in_progress"
+      }
+    ]
+  },
+  {
+    "id": "course_9",
+    "name": "English Grade 6",
+    "subject": "English",
+    "grade": "6",
+    "teacherId": "teacher_3",
+    "classId": "class_4",
+    "modules": [
+      {
+        "id": "module_17",
+        "name": "Grammar and Vocabulary",
+        "description": "Advanced grammar rules and word usage",
+        "status": "completed"
+      },
+      {
+        "id": "module_18",
+        "name": "Literature Analysis",
+        "description": "Analyzing poems and prose",
+        "status": "in_progress"
+      }
+    ]
+  },
+  {
+    "id": "course_10",
+    "name": "History Grade 8",
+    "subject": "History",
+    "grade": "8",
+    "teacherId": "teacher_4",
+    "classId": "class_5",
+    "modules": [
+      {
+        "id": "module_19",
+        "name": "World War I & II",
+        "description": "Major events and impacts",
+        "status": "in_progress"
+      },
+      {
+        "id": "module_20",
+        "name": "Modern India",
+        "description": "Independence and post-independence era",
+        "status": "upcoming"
+      }
+    ]
+  }
+]

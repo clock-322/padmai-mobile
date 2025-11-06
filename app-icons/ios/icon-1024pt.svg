@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="2048" height="2048" viewBox="0 0 2048 2048" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .lotus { fill: #D4AF37; }
+      .cap { fill: #1E3A8A; }
+      .text { fill: #1E3A8A; font-family: Arial, sans-serif; font-weight: bold; }
+    </style>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="2048" height="2048" fill="white" rx="409.6"/>
+  
+  <!-- Lotus Flower -->
+  <g class="lotus" transform="translate(409.6, 307.2)">
+    <!-- Center -->
+    <circle cx="614.4" cy="614.4" r="245.76" fill="#D4AF37"/>
+    
+    <!-- Petals -->
+    <ellipse cx="614.4" cy="409.6" rx="163.84" ry="245.76" transform="rotate(0 614.4 614.4)"/>
+    <ellipse cx="614.4" cy="409.6" rx="163.84" ry="245.76" transform="rotate(45 614.4 614.4)"/>
+    <ellipse cx="614.4" cy="409.6" rx="163.84" ry="245.76" transform="rotate(-45 614.4 614.4)"/>
+    <ellipse cx="614.4" cy="409.6" rx="163.84" ry="245.76" transform="rotate(90 614.4 614.4)"/>
+    <ellipse cx="614.4" cy="409.6" rx="163.84" ry="245.76" transform="rotate(-90 614.4 614.4)"/>
+  </g>
+  
+  <!-- Graduation Cap -->
+  <g class="cap" transform="translate(512, 204.8)">
+    <rect x="204.8" y="102.4" width="614.4" height="163.84" rx="2"/>
+    <rect x="716.8" y="102.4" width="40.96" height="204.8" rx="1"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="1024" y="1740.8" text-anchor="middle" class="text" font-size="245.76">Padmai</text>
+</svg>
