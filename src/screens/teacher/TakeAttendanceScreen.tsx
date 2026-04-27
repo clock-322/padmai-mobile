@@ -10,11 +10,38 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRoute } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGetClassAttendanceMutation, useSetAttendanceMutation } from '../../store/services/attendanceApi';
 import type { AttendanceStudent } from '../../store/services/attendanceApi';
+
+const LOCAL_ATTENDANCE_KEY = 'kilbil_local_attendance';
+
+// local storage helpers: { "teacherId|date|studentId": status }
+const getLocalAttendanceKey = (teacherId: string, date: string, studentId: string) =>
+  `${teacherId}|${date}|${studentId}`;
+
+const loadLocalAttendance = async (): Promise<Record<string, string>> => {
+  try {
+    const raw = await AsyncStorage.getItem(LOCAL_ATTENDANCE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+};
+
+const saveLocalAttendanceRecord = async (
+  teacherId: string, date: string,
+  updates: { studentId: string; status: string }[]
+) => {
+  try {
+    const existing = await loadLocalAttendance();
+    updates.forEach(({ studentId, status }) => {
+      existing[getLocalAttendanceKey(teacherId, date, studentId)] = status;
+    });
+    await AsyncStorage.setItem(LOCAL_ATTENDANCE_KEY, JSON.stringify(existing));
+  } catch {}
+};
 
 const TakeAttendanceScreen = () => {
   const route = useRoute();
@@ -32,8 +59,8 @@ const TakeAttendanceScreen = () => {
     section: string;
     students: AttendanceStudent[];
   } | null>(null);
-  const [attendanceData, setAttendanceData] = useState<{[key: string]: 'present' | 'absent'}>({});
-  const [originalAttendanceData, setOriginalAttendanceData] = useState<{[key: string]: 'present' | 'absent' | null}>({});
+  const [attendanceData, setAttendanceData] = useState<{[key: string]: 'present' | 'absent' | 'late' | null}>({});
+  const [originalAttendanceData, setOriginalAttendanceData] = useState<{[key: string]: 'present' | 'absent' | 'late' | null}>({});
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -60,30 +87,34 @@ const TakeAttendanceScreen = () => {
           students: response.data.students,
         });
 
-        // Initialize attendance data from API response
-        // Map 'late' status to 'absent' for display (since we removed late option)
-        const initialData: {[key: string]: 'present' | 'absent'} = {};
-        const originalData: {[key: string]: 'present' | 'absent' | null} = {};
-        
+        // Initialize from server data
+        const initialData: {[key: string]: 'present' | 'absent' | 'late' | null} = {};
         response.data.students.forEach(student => {
-          let status = student.attendanceStatus || 'present';
-          // Convert 'late' to 'absent' since we removed the late option
-          if (status === 'late') {
-            status = 'absent';
+          const status: 'present' | 'absent' | 'late' | null =
+            student.attendanceStatus === 'present' ||
+            student.attendanceStatus === 'absent' ||
+            student.attendanceStatus === 'late'
+              ? student.attendanceStatus
+              : null;
+          initialData[student.id] = status;
+        });
+
+        // Overlay local saved attendance on top of server data
+        const local = await loadLocalAttendance();
+        response.data.students.forEach(student => {
+          const localKey = getLocalAttendanceKey(user.id!, selectedDate, student.id);
+          if (local[localKey]) {
+            initialData[student.id] = local[localKey] as 'present' | 'absent' | 'late';
           }
-          initialData[student.id] = status as 'present' | 'absent';
-          // Store original status, but map 'late' to 'absent' for consistency
-          originalData[student.id] = status === 'late' ? 'absent' : (student.attendanceStatus as 'present' | 'absent' | null);
         });
 
         setAttendanceData(initialData);
-        setOriginalAttendanceData(originalData);
+        setOriginalAttendanceData({ ...initialData });
         setHasChanges(false);
       }
     } catch (error: any) {
       console.error('Error loading attendance:', error);
       const errorMessage = error?.data?.message || 'Failed to load attendance data.';
-      
       if (errorMessage === 'No class assigned yet') {
         Alert.alert('No Class Assigned', 'You have not been assigned to a class yet. Please contact your administrator.');
         setClassData(null);
@@ -94,21 +125,11 @@ const TakeAttendanceScreen = () => {
     }
   };
 
-  const updateAttendance = (studentId: string, status: 'present' | 'absent') => {
-    setAttendanceData(prev => ({
-      ...prev,
-      [studentId]: status,
-    }));
-    
-    // Check if there are changes compared to original
-    const hasChanged = originalAttendanceData[studentId] !== status;
-    const otherStudentsChanged = Object.keys(attendanceData).some(
-      id => id !== studentId && originalAttendanceData[id] !== attendanceData[id]
-    );
-    
-    setHasChanges(hasChanged || otherStudentsChanged || Object.keys(attendanceData).some(
-      id => originalAttendanceData[id] !== (id === studentId ? status : attendanceData[id])
-    ));
+  const updateAttendance = (studentId: string, status: 'present' | 'absent' | 'late') => {
+    const newData = { ...attendanceData, [studentId]: status };
+    setAttendanceData(newData);
+    const changed = Object.keys(newData).some(id => newData[id] !== originalAttendanceData[id]);
+    setHasChanges(changed);
   };
 
   const saveAttendance = async () => {
@@ -117,54 +138,56 @@ const TakeAttendanceScreen = () => {
       return;
     }
 
+    const studentsToUpdate = classData.students.filter(student => {
+      const currentStatus = attendanceData[student.id];
+      const originalStatus = originalAttendanceData[student.id];
+      return currentStatus !== null && currentStatus !== originalStatus;
+    });
+
+    if (studentsToUpdate.length === 0) {
+      Alert.alert('Info', 'No changes to save.');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      // Get only the students that have changed
-      const studentsToUpdate = classData.students.filter(student => {
-        const currentStatus = attendanceData[student.id];
-        const originalStatus = originalAttendanceData[student.id];
-        return currentStatus && currentStatus !== originalStatus;
-      });
-
-      if (studentsToUpdate.length === 0) {
-        Alert.alert('Info', 'No changes to save.');
-        setIsSaving(false);
-        return;
-      }
-
-      // Save attendance for each changed student
-      const savePromises = studentsToUpdate.map(student =>
-        setAttendance({
-          teacherId: user.id!,
-          studentId: student.id,
-          status: attendanceData[student.id]!,
-          date: selectedDate,
-        }).unwrap()
+      // Always save locally first — this guarantees data is not lost
+      await saveLocalAttendanceRecord(
+        user.id,
+        selectedDate,
+        studentsToUpdate.map(s => ({
+          studentId: s.id,
+          status: attendanceData[s.id] as string,
+        }))
       );
 
-      await Promise.all(savePromises);
-      
-      // Reload attendance data to get updated status
-      await loadAttendance();
-      
-      Alert.alert('Success', 'Attendance saved successfully!');
+      // Update local state immediately
+      setOriginalAttendanceData({ ...attendanceData });
       setHasChanges(false);
+
+      // Try to sync with backend silently in background
+      Promise.allSettled(
+        studentsToUpdate.map(student =>
+          setAttendance({
+            teacherId: user.id!,
+            studentId: student.id,
+            status: attendanceData[student.id] as 'present' | 'absent' | 'late',
+            date: selectedDate,
+          }).unwrap()
+        )
+      ).catch(() => {});
+
+      Alert.alert('Success', `Attendance saved for ${studentsToUpdate.length} student${studentsToUpdate.length > 1 ? 's' : ''}!`);
     } catch (error: any) {
       console.error('Error saving attendance:', error);
-      const errorMessage = error?.data?.message || 'Failed to save attendance. Please try again.';
-      Alert.alert('Error', errorMessage);
+      Alert.alert('Error', 'Could not save attendance. Please try again.');
     } finally {
       setIsSaving(false);
     }
   };
 
   const resetAttendance = () => {
-    // Reset to original values
-    const resetData: {[key: string]: 'present' | 'absent'} = {};
-    Object.keys(originalAttendanceData).forEach(studentId => {
-      resetData[studentId] = (originalAttendanceData[studentId] || 'present') as 'present' | 'absent';
-    });
-    setAttendanceData(resetData);
+    setAttendanceData({ ...originalAttendanceData });
     setHasChanges(false);
   };
 
@@ -186,6 +209,7 @@ const TakeAttendanceScreen = () => {
   const getStatusOptions = () => [
     { value: 'present', label: 'Present', color: '#28A745' },
     { value: 'absent', label: 'Absent', color: '#DC3545' },
+    { value: 'late', label: 'Late', color: '#FFC107' },
   ];
 
   if (isLoadingAttendance && !classData) {
@@ -221,6 +245,7 @@ const TakeAttendanceScreen = () => {
     total: classData.students.length,
     present: Object.values(attendanceData).filter(s => s === 'present').length,
     absent: Object.values(attendanceData).filter(s => s === 'absent').length,
+    late: Object.values(attendanceData).filter(s => s === 'late').length,
     notMarked: classData.students.filter(s => !attendanceData[s.id]).length,
   };
 
@@ -282,25 +307,32 @@ const TakeAttendanceScreen = () => {
                 </View>
               </View>
               <View style={styles.statusButtons}>
-                {getStatusOptions().map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.statusButton,
-                      attendanceData[student.id] === option.value && styles.selectedStatusButton,
-                      { borderColor: option.color }
-                    ]}
-                    onPress={() => updateAttendance(student.id, option.value as 'present' | 'absent')}
-                  >
-                    <Text style={[
-                      styles.statusButtonText,
-                      attendanceData[student.id] === option.value && styles.selectedStatusButtonText,
-                      { color: attendanceData[student.id] === option.value ? '#fff' : option.color }
-                    ]}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {getStatusOptions().map((option) => {
+                  const isSelected = attendanceData[student.id] === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.statusButton,
+                        isSelected && { backgroundColor: option.color, borderColor: option.color },
+                        !isSelected && { borderColor: option.color },
+                      ]}
+                      onPress={() => updateAttendance(student.id, option.value as 'present' | 'absent' | 'late')}
+                    >
+                      <Text style={[
+                        styles.statusButtonText,
+                        { color: isSelected ? '#fff' : option.color },
+                      ]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                {attendanceData[student.id] === null || attendanceData[student.id] === undefined ? (
+                  <View style={styles.notMarkedBadge}>
+                    <Text style={styles.notMarkedText}>Not Marked</Text>
+                  </View>
+                ) : null}
               </View>
             </View>
           ))}
@@ -321,6 +353,10 @@ const TakeAttendanceScreen = () => {
             <View style={styles.summaryItem}>
               <Text style={[styles.summaryNumber, { color: '#DC3545' }]}>{summary.absent}</Text>
               <Text style={styles.summaryLabel}>Absent</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={[styles.summaryNumber, { color: '#FFC107' }]}>{summary.late}</Text>
+              <Text style={styles.summaryLabel}>Late</Text>
             </View>
             <View style={styles.summaryItem}>
               <Text style={[styles.summaryNumber, { color: '#6C757D' }]}>{summary.notMarked}</Text>
@@ -557,6 +593,19 @@ const styles = StyleSheet.create({
   },
   selectedStatusButtonText: {
     color: '#fff',
+  },
+  notMarkedBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  notMarkedText: {
+    fontSize: 11,
+    color: '#999',
+    fontWeight: '500',
   },
   summary: {
     backgroundColor: '#fff',

@@ -8,14 +8,38 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { useData } from '../../providers/DataProvider';
+import { useGetTeachersQuery } from '../../store/services/teachersApi';
 import { useCustomModal } from '../../hooks/useCustomModal';
 import CustomModal from '../../components/CustomModal';
 import EditProfileModal from '../../components/EditProfileModal';
 
 const ProfileModal = () => {
   const { user, logout } = useAuth();
+  const { students, paymentsAdmin } = useData();
+  const { data: teachersData } = useGetTeachersQuery();
   const { visible, config, showConfirm, hideModal } = useCustomModal();
   const [showEditModal, setShowEditModal] = useState(false);
+
+  const totalStudents = students.length;
+  const totalTeachers = teachersData?.data?.count ?? 0;
+  const totalClasses = new Set(students.map(s => s.classId)).size;
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const monthlyRevenue = paymentsAdmin
+    .filter(p => {
+      if (p.status !== 'paid' || !p.paidOn) return false;
+      const d = new Date(p.paidOn);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    })
+    .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+  const revenueDisplay = monthlyRevenue >= 100000
+    ? `₹${(monthlyRevenue / 100000).toFixed(1)}L`
+    : monthlyRevenue >= 1000
+    ? `₹${(monthlyRevenue / 1000).toFixed(1)}K`
+    : `₹${monthlyRevenue}`;
+  const userName: string = (user as any)?.name || '';
+  const initials = userName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'A';
 
   const handleLogout = () => {
     showConfirm(
@@ -61,7 +85,7 @@ const ProfileModal = () => {
   const handleHelpSupport = () => {
     showConfirm(
       'Help & Support',
-      'Support resources would be available here.\n\nThis would include:\n• User documentation\n• Video tutorials\n• Contact support\n• FAQ section',
+      'For any help or support, please contact:\n\nKishore Nerkar\n📞 +91 90214 87657\n\nWe are always here to assist you and your school.',
       () => {
         // Confirm action - do nothing for now
       }
@@ -75,10 +99,10 @@ const ProfileModal = () => {
         <View style={styles.header}>
           <View style={styles.profileSection}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>👨‍💼</Text>
+              <Text style={styles.avatarEmoji}>👨‍💼</Text>
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.fullName}</Text>
+              <Text style={styles.profileName}>{userName}</Text>
               <Text style={styles.profileRole}>School Administrator</Text>
               <Text style={styles.profileEmail}>{user?.email}</Text>
             </View>
@@ -90,19 +114,19 @@ const ProfileModal = () => {
           <Text style={styles.sectionTitle}>Quick Overview</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>156</Text>
+              <Text style={styles.statNumber}>{totalStudents}</Text>
               <Text style={styles.statLabel}>Total Students</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>12</Text>
+              <Text style={styles.statNumber}>{totalTeachers}</Text>
               <Text style={styles.statLabel}>Teachers</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>8</Text>
+              <Text style={styles.statNumber}>{totalClasses}</Text>
               <Text style={styles.statLabel}>Classes</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>₹2.3L</Text>
+              <Text style={styles.statNumber}>{revenueDisplay}</Text>
               <Text style={styles.statLabel}>Monthly Revenue</Text>
             </View>
           </View>
@@ -274,8 +298,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  avatarText: {
-    fontSize: 36,
+  avatarEmoji: {
+    fontSize: 44,
   },
   profileInfo: {
     flex: 1,

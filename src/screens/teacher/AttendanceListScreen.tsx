@@ -132,16 +132,16 @@ const AttendanceListScreen = () => {
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <View style={styles.headerTop}>
-              <Text style={styles.logo}>📚 Padmai</Text>
+              <Text style={styles.logo}>🏫 Kilbil School</Text>
               <View style={styles.headerRight}>
-                <Text style={styles.welcomeText}>Welcome, {user?.fullName?.split(' ')[0]}!</Text>
+                <Text style={styles.welcomeText}>Welcome, {(user as any)?.name?.split(' ')[0]}!</Text>
                 <TeacherHeaderRight onPress={() => setProfileModalVisible(true)} />
               </View>
             </View>
             <View style={styles.teacherInfo}>
               <Text style={styles.teacherAvatar}>👩‍🏫</Text>
               <View style={styles.teacherDetails}>
-                <Text style={styles.teacherName}>{user?.fullName}</Text>
+                <Text style={styles.teacherName}>{(user as any)?.name}</Text>
                 <Text style={styles.teacherRole}>Teacher</Text>
               </View>
             </View>
@@ -166,16 +166,16 @@ const AttendanceListScreen = () => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Text style={styles.logo}>📚 Padmai</Text>
+            <Text style={styles.logo}>🏫 Kilbil School</Text>
             <View style={styles.headerRight}>
-              <Text style={styles.welcomeText}>Welcome, {user?.fullName?.split(' ')[0]}!</Text>
+              <Text style={styles.welcomeText}>Welcome, {(user as any)?.name?.split(' ')[0]}!</Text>
               <TeacherHeaderRight onPress={() => setProfileModalVisible(true)} />
             </View>
           </View>
           <View style={styles.teacherInfo}>
             <Text style={styles.teacherAvatar}>👩‍🏫</Text>
             <View style={styles.teacherDetails}>
-              <Text style={styles.teacherName}>{user?.fullName}</Text>
+              <Text style={styles.teacherName}>{(user as any)?.name}</Text>
               <Text style={styles.teacherRole}>Teacher</Text>
             </View>
           </View>

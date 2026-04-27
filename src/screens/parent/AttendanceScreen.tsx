@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,12 @@ import {
   SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
+import { useSelector } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
+import { RootState } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../providers/DataProvider';
+import { useGetStudentsByParentIdMutation } from '../../store/services/studentsApi';
 import ProfileIcon from '../../components/ProfileIcon';
 
 interface AttendanceRecord {
@@ -27,9 +31,58 @@ interface MonthlyStats {
   percentage: number;
 }
 
+// Fixed Indian public holidays (MM-DD — same date every year)
+const FIXED_HOLIDAYS: Record<string, string> = {
+  '01-26': 'Republic Day',
+  '04-14': 'Dr. Ambedkar Jayanti',
+  '05-01': 'Maharashtra Day',
+  '08-15': 'Independence Day',
+  '10-02': 'Gandhi Jayanti',
+  '12-25': 'Christmas',
+};
+
+// Movable Indian holidays by exact date (add future years as needed)
+const MOVABLE_HOLIDAYS: Record<string, string> = {
+  // 2025
+  '2025-01-14': 'Makar Sankranti',
+  '2025-03-14': 'Holi',
+  '2025-04-06': 'Ram Navami',
+  '2025-04-18': 'Good Friday',
+  '2025-05-12': 'Buddha Purnima',
+  '2025-06-07': 'Eid ul-Adha',
+  '2025-08-16': 'Janmashtami',
+  '2025-08-27': 'Ganesh Chaturthi',
+  '2025-10-02': 'Dussehra',
+  '2025-10-20': 'Diwali',
+  '2025-10-21': 'Diwali',
+  '2025-11-05': 'Guru Nanak Jayanti',
+  // 2026
+  '2026-01-14': 'Makar Sankranti',
+  '2026-03-04': 'Holi',
+  '2026-03-30': 'Ram Navami',
+  '2026-04-03': 'Good Friday',
+  '2026-04-21': 'Eid ul-Fitr',
+  '2026-08-05': 'Janmashtami',
+  '2026-08-23': 'Ganesh Chaturthi',
+  '2026-10-19': 'Dussehra',
+  '2026-11-08': 'Diwali',
+  '2026-11-09': 'Diwali',
+  '2026-11-24': 'Guru Nanak Jayanti',
+};
+
+const getHolidayName = (dateStr: string): string | null => {
+  // Check exact YYYY-MM-DD first (movable feasts)
+  if (MOVABLE_HOLIDAYS[dateStr]) return MOVABLE_HOLIDAYS[dateStr];
+  // Then check fixed MM-DD holidays
+  const mmdd = dateStr.slice(5);
+  return FIXED_HOLIDAYS[mmdd] || null;
+};
+
 const AttendanceScreen = () => {
   const { user } = useAuth();
+  const reduxUser = useSelector((state: RootState) => state.auth.user);
   const { students, attendance } = useData();
+  const [getStudentsByParentId] = useGetStudentsByParentIdMutation();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [monthlyAttendance, setMonthlyAttendance] = useState<AttendanceRecord[]>([]);
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats>({
@@ -40,52 +93,85 @@ const AttendanceScreen = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadAttendanceData();
-  }, [currentMonth]);
-
-  const loadAttendanceData = async () => {
+  const loadAttendanceData = useCallback(async () => {
     try {
       setLoading(true);
-      
-      // Simulate loading delay
-      await new Promise<void>(resolve => setTimeout(resolve, 500));
+      const currentUser = reduxUser || user;
 
-      const child = students.find(s => s.id === user?.childId);
-      if (!child) {
-        setLoading(false);
-        return;
+      // --- Primary: fetch live attendance from API via attendanceHistory ---
+      let apiRecords: AttendanceRecord[] = [];
+      if (currentUser?.id) {
+        try {
+          const res = await getStudentsByParentId({ parentId: currentUser.id }).unwrap();
+          if (res.success && res.data?.students?.length) {
+            const apiStudent = res.data.students[0]; // first linked student
+            const history = apiStudent.attendanceHistory || [];
+            apiRecords = history.map((h, idx) => ({
+              id: `api_${idx}`,
+              studentId: apiStudent.id,
+              date: h.date.slice(0, 10), // normalize to YYYY-MM-DD
+              status: (h.status as 'present' | 'absent' | 'late') || 'present',
+            }));
+            // Use local date (not UTC) to avoid timezone off-by-one in IST
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            // Inject today's status from attendanceStatus if not already in history
+            if (apiStudent.attendanceStatus) {
+              const alreadyHasToday = apiRecords.some(r => r.date === todayStr);
+              if (!alreadyHasToday) {
+                apiRecords.push({
+                  id: 'api_today',
+                  studentId: apiStudent.id,
+                  date: todayStr,
+                  status: apiStudent.attendanceStatus as 'present' | 'absent' | 'late',
+                });
+              }
+            }
+          }
+        } catch {
+          // API failed — fall through to static data
+        }
       }
 
-      // Filter attendance for current month
+      // --- Fallback: static JSON data ---
+      let records = apiRecords;
+      if (records.length === 0) {
+        const childId = (currentUser as any)?.childId;
+        const child = childId ? students.find(s => s.id === childId) : students.find(s => s.id === 's_1');
+        if (child) {
+          records = attendance.filter(r => r.studentId === child.id) as AttendanceRecord[];
+        }
+      }
+
+      // Filter to current month
       const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
       const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-
-      const filteredAttendance = attendance.filter(record => {
-        const recordDate = new Date(record.date);
-        return (
-          record.studentId === child.id &&
-          recordDate >= startOfMonth &&
-          recordDate <= endOfMonth
-        );
+      const filtered = records.filter(r => {
+        const d = new Date(r.date);
+        return d >= startOfMonth && d <= endOfMonth;
       });
 
-      setMonthlyAttendance(filteredAttendance);
+      setMonthlyAttendance(filtered);
 
-      // Calculate monthly stats
-      const present = filteredAttendance.filter(r => r.status === 'present').length;
-      const absent = filteredAttendance.filter(r => r.status === 'absent').length;
-      const late = filteredAttendance.filter(r => r.status === 'late').length;
-      const total = present + absent + late;
+      const present = filtered.filter(r => r.status === 'present').length;
+      const absent  = filtered.filter(r => r.status === 'absent').length;
+      const late    = filtered.filter(r => r.status === 'late').length;
+      const total   = present + absent + late;
       const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
-
       setMonthlyStats({ present, absent, late, percentage });
     } catch (error) {
       console.error('Error loading attendance data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [reduxUser, user, students, attendance, currentMonth, getStudentsByParentId]);
+
+  // Reload every time the screen is focused (catches teacher attendance updates)
+  useFocusEffect(
+    useCallback(() => {
+      loadAttendanceData();
+    }, [loadAttendanceData])
+  );
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     const newMonth = new Date(currentMonth);
@@ -106,27 +192,21 @@ const AttendanceScreen = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'present':
-        return '#28A745';
-      case 'absent':
-        return '#DC3545';
-      case 'late':
-        return '#FFC107';
-      default:
-        return '#6C757D';
+      case 'present': return '#28A745';
+      case 'absent':  return '#DC3545';
+      case 'late':    return '#FFC107';
+      case 'holiday': return '#FF9800';
+      default:        return '#E0E0E0';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'present':
-        return '✅';
-      case 'absent':
-        return '❌';
-      case 'late':
-        return '⏰';
-      default:
-        return '❓';
+      case 'present': return '✅';
+      case 'absent':  return '❌';
+      case 'late':    return '⏰';
+      case 'holiday': return '🎉';
+      default:        return '';
     }
   };
 
@@ -138,26 +218,28 @@ const AttendanceScreen = () => {
     const daysInMonth = getDaysInMonth(currentMonth);
     const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
     const startingDayOfWeek = firstDay.getDay();
-    
+
     const days = [];
-    
-    // Add empty cells for days before the first day of the month
+
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(null);
     }
-    
-    // Add days of the month
+
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const attendanceRecord = monthlyAttendance.find(a => a.date === dateStr);
+      const holiday = getHolidayName(dateStr);
+      const dow = new Date(dateStr).getDay();
+      const isWeekend = dow === 0 || dow === 6;
+      const weekendLabel = dow === 0 ? 'Sunday' : 'Saturday';
       days.push({
         day,
         date: dateStr,
-        status: attendanceRecord?.status || 'unknown',
-        reason: attendanceRecord?.reason,
+        status: attendanceRecord?.status || (holiday || isWeekend ? 'holiday' : 'unknown'),
+        reason: attendanceRecord?.reason || holiday || (isWeekend ? weekendLabel : undefined),
       });
     }
-    
+
     return days;
   };
 
@@ -272,6 +354,10 @@ const AttendanceScreen = () => {
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendIndicator, { backgroundColor: '#FFC107' }]} />
+              <Text style={styles.legendText}>Late</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendIndicator, { backgroundColor: '#FF9800' }]} />
               <Text style={styles.legendText}>Holiday</Text>
             </View>
           </View>

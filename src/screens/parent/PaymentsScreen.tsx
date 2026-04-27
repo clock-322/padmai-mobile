@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,10 @@ import {
 } from 'react-native';
 import { Linking } from 'react-native';
 import { useSelector } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
 import { RootState } from '../../store';
 import { useGetPaymentsByStudentIdMutation } from '../../store/services/paymentsApi';
+import { useGetStudentsByParentIdMutation } from '../../store/services/studentsApi';
 import { PaymentApiItem } from '../../types/payments';
 import ProfileIcon from '../../components/ProfileIcon';
 
@@ -24,42 +26,62 @@ interface PaymentSummary {
 
 const PaymentsScreen = () => {
   const user = useSelector((s: RootState) => s.auth.user as any);
-  const [fetchPayments, { data, isLoading, isError, error, isUninitialized }]
-    = useGetPaymentsByStudentIdMutation();
+  const [fetchPayments] = useGetPaymentsByStudentIdMutation();
+  const [getStudentsByParentId] = useGetStudentsByParentIdMutation();
   const [userPayments, setUserPayments] = useState<PaymentApiItem[]>([]);
   const [summary, setSummary] = useState<PaymentSummary>({ totalAmount: 0, count: 0 });
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const studentId = 'STU001';
+  const loadPayments = useCallback(async () => {
+    try {
+      // Step 1: get the real student ID for this parent
+      let studentId: string | null = null;
 
-  useEffect(() => {
-    if (studentId) {
-      fetchPayments({ studentId })
-        .unwrap()
-        .then((res) => {
-          setUserPayments(res.data.payments || []);
-          const totalAmount = (res.data.payments || []).reduce((sum, p) => sum + (p.amount || 0), 0);
-          setSummary({ totalAmount, count: res.data.count || (res.data.payments || []).length });
-        })
-        .catch(() => {
-          setUserPayments([]);
-          setSummary({ totalAmount: 0, count: 0 });
-        });
+      if (user?.id) {
+        try {
+          const studentRes = await getStudentsByParentId({ parentId: user.id }).unwrap();
+          if (studentRes.success && studentRes.data?.students?.length) {
+            studentId = studentRes.data.students[0].id;
+          }
+        } catch {
+          // fall through
+        }
+      }
+
+      if (!studentId) {
+        setUserPayments([]);
+        setSummary({ totalAmount: 0, count: 0 });
+        return;
+      }
+
+      // Step 2: fetch payments for this student
+      const res = await fetchPayments({ studentId }).unwrap();
+      const payments = res.data.payments || [];
+      setUserPayments(payments);
+      const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+      setSummary({ totalAmount, count: res.data.count || payments.length });
+    } catch {
+      setUserPayments([]);
+      setSummary({ totalAmount: 0, count: 0 });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  }, [studentId, fetchPayments]);
+  }, [user?.id, fetchPayments, getStudentsByParentId]);
+
+  // Reload every time the tab is focused — catches new payment reminders from admin
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      loadPayments();
+    }, [loadPayments])
+  );
 
   const onRefresh = useCallback(() => {
-    if (!studentId) return;
     setRefreshing(true);
-    fetchPayments({ studentId })
-      .unwrap()
-      .then((res) => {
-        setUserPayments(res.data.payments || []);
-        const totalAmount = (res.data.payments || []).reduce((sum, p) => sum + (p.amount || 0), 0);
-        setSummary({ totalAmount, count: res.data.count || (res.data.payments || []).length });
-      })
-      .finally(() => setRefreshing(false));
-  }, [studentId, fetchPayments]);
+    loadPayments();
+  }, [loadPayments]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -100,27 +122,11 @@ const PaymentsScreen = () => {
 
   // Local mark-as-paid UI removed for API-driven listing
 
-  if (!studentId) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>No student linked to this account.</Text>
-      </View>
-    );
-  }
-
-  if (isLoading) {
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2F6FED" />
         <Text style={styles.loadingText}>Loading payments...</Text>
-      </View>
-    );
-  }
-
-  if (isError) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Failed to load payments.</Text>
       </View>
     );
   }
@@ -140,20 +146,6 @@ const PaymentsScreen = () => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> }>
-        {/* Summary Cards */}
-        <View style={styles.summaryContainer}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryNumber}>{formatCurrency(summary.totalAmount)}</Text>
-            <Text style={styles.summaryLabel}>Total Amount</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryNumber}>{summary.count}</Text>
-            <Text style={styles.summaryLabel}>Payments</Text>
-          </View>
-        </View>
-        
-        {/* Overdue Alert removed (API doesn't provide status) */}
-
         {/* Primary Action */}
         <TouchableOpacity
           style={styles.primaryActionButton}
@@ -163,10 +155,20 @@ const PaymentsScreen = () => {
           <Text style={styles.primaryActionText}>Pay at School Portal</Text>
         </TouchableOpacity>
 
+        {/* Pending reminder banner */}
+        {userPayments.some(p => p.status !== 'paid') && (
+          <View style={styles.pendingBanner}>
+            <Text style={styles.pendingBannerIcon}>⚠️</Text>
+            <Text style={styles.pendingBannerText}>
+              You have pending payments. Please clear them at the school portal.
+            </Text>
+          </View>
+        )}
+
         {/* Payments List */}
         <View style={styles.paymentsSection}>
           <Text style={styles.sectionTitle}>Payment History</Text>
-          
+
           {userPayments.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyIcon}>💳</Text>
@@ -178,44 +180,69 @@ const PaymentsScreen = () => {
           ) : (
             userPayments
               .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-              .map((payment) => (
-                <View key={payment._id} style={styles.paymentCard}>
-                  <View style={styles.paymentHeader}>
-                    <Text style={styles.paymentAmount}>
-                      {formatCurrency(payment.amount)}
+              .map((payment) => {
+                const isPaid = payment.status === 'paid';
+                const isOverdue = payment.status === 'overdue';
+                const statusLabel = isPaid ? 'Paid' : isOverdue ? 'Overdue' : 'Pending';
+                const statusColor = isPaid ? '#28A745' : isOverdue ? '#DC3545' : '#FF9800';
+                return (
+                  <View
+                    key={payment._id}
+                    style={[
+                      styles.paymentCard,
+                      !isPaid && { borderLeftWidth: 4, borderLeftColor: statusColor },
+                    ]}
+                  >
+                    <View style={styles.paymentHeader}>
+                      <Text style={styles.paymentAmount}>
+                        {formatCurrency(payment.amount)}
+                      </Text>
+                      <View style={styles.badgeRow}>
+                        <View style={[styles.statusBadge, { backgroundColor: statusColor + '22', borderColor: statusColor }]}>
+                          <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
+                        </View>
+                        <View style={styles.typeBadge}>
+                          <Text style={styles.typeBadgeText}>{payment.paymentType?.toUpperCase?.() || payment.paymentType}</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <Text style={styles.paymentDescription} numberOfLines={1}>
+                      {payment.name}
                     </Text>
-                  <View style={styles.statusBadge}>
-                      <Text style={styles.statusText}>{payment.paymentType?.toUpperCase?.() || payment.paymentType}</Text>
+                    <View style={styles.divider} />
+
+                    <View style={styles.paymentDetails}>
+                      <View style={styles.paymentDetail}>
+                        <Text style={styles.paymentDetailIcon}>👤</Text>
+                        <Text style={styles.paymentDetailText}>
+                          Student: {payment.studentName}
+                        </Text>
+                      </View>
+                      <View style={styles.paymentDetail}>
+                        <Text style={styles.paymentDetailIcon}>🏫</Text>
+                        <Text style={styles.paymentDetailText}>
+                          Class: {payment.className}
+                        </Text>
+                      </View>
+                      <View style={styles.paymentDetail}>
+                        <Text style={styles.paymentDetailIcon}>📅</Text>
+                        <Text style={styles.paymentDetailText}>
+                          Created: {formatDate(payment.createdAt)}
+                        </Text>
+                      </View>
+                      {payment.dueDate && (
+                        <View style={styles.paymentDetail}>
+                          <Text style={styles.paymentDetailIcon}>⏰</Text>
+                          <Text style={[styles.paymentDetailText, isOverdue && { color: '#DC3545', fontWeight: '600' }]}>
+                            Due: {formatDate(payment.dueDate)}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
-
-                  <Text style={styles.paymentDescription} numberOfLines={1}>
-                    {payment.name}
-                  </Text>
-                  <View style={styles.divider} />
-
-                  <View style={styles.paymentDetails}>
-                    <View style={styles.paymentDetail}>
-                      <Text style={styles.paymentDetailIcon}>👤</Text>
-                      <Text style={styles.paymentDetailText}>
-                        Student: {payment.studentName}
-                      </Text>
-                    </View>
-                    <View style={styles.paymentDetail}>
-                      <Text style={styles.paymentDetailIcon}>🏫</Text>
-                      <Text style={styles.paymentDetailText}>
-                        Class: {payment.className}
-                      </Text>
-                    </View>
-                    <View style={styles.paymentDetail}>
-                      <Text style={styles.paymentDetailIcon}>📅</Text>
-                      <Text style={styles.paymentDetailText}>
-                        Created: {formatDate(payment.createdAt)}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              ))
+                );
+              })
           )}
         </View>
 
@@ -410,15 +437,48 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2F6FED',
   },
+  pendingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3CD',
+    borderColor: '#FFC107',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  pendingBannerIcon: { fontSize: 18 },
+  pendingBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#856404',
+    lineHeight: 18,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 14,
-    backgroundColor: '#E8F0FF',
+    borderWidth: 1,
   },
   statusText: {
-    color: '#2F6FED',
     fontSize: 12,
+    fontWeight: '700',
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 14,
+    backgroundColor: '#E8F0FF',
+  },
+  typeBadgeText: {
+    color: '#2F6FED',
+    fontSize: 11,
     fontWeight: '700',
   },
   paymentDescription: {

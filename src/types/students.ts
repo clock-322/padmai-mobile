@@ -3,9 +3,12 @@ export interface AddStudentPayload {
   firstName: string;
   lastName: string;
   class: string;
-  section: string;
-  registrationNo: string;
+  section?: string;
+  registrationNo?: string;
   classRollNo: string;
+  fatherName?: string;
+  motherName?: string;
+  division?: string;
 }
 
 export interface AddStudentResponse {
@@ -38,9 +41,10 @@ export interface StudentApi {
 export interface StudentFormData {
   firstName: string;
   lastName: string;
+  fatherName: string;
+  motherName: string;
   class: string;
-  section: string;
-  registrationNo: string;
+  division: string;
   classRollNo: string;
 }
 

@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const apiUser = res.data.user;
       const token = res.data.token;
       const normalizedRole: Role = (apiUser.role === 'admin' ? 'schoolOwner' : apiUser.role) as Role;
-      const userForState: any = { id: apiUser.id, name: apiUser.name, email: apiUser.email, role: normalizedRole };
+      const userForState: any = { id: apiUser.id, name: apiUser.name, email: apiUser.email, role: normalizedRole, childId: apiUser.childId, subject: apiUser.subject, class: apiUser.class, section: apiUser.section };
       dispatch(setCredentials({ token, user: userForState }));
       await persistCredentials(token, userForState);
       return { success: true };
@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const apiUser = res.data.user;
       const token = res.data.token;
       const normalizedRole: Role = (apiUser.role === 'admin' ? 'schoolOwner' : apiUser.role) as Role;
-      const userForState: any = { id: apiUser.id, name: apiUser.name, email: apiUser.email, role: normalizedRole };
+      const userForState: any = { id: apiUser.id, name: apiUser.name, email: apiUser.email, role: normalizedRole, childId: apiUser.childId, subject: apiUser.subject, class: apiUser.class, section: apiUser.section };
       dispatch(setCredentials({ token, user: userForState }));
       await persistCredentials(token, userForState);
       return { success: true };

@@ -9,6 +9,7 @@ import AttendanceReportScreen from '../screens/teacher/AttendanceReportScreen';
 import CalendarScreen from '../screens/teacher/CalendarScreen';
 import TeacherChatDirectory from '../screens/teacher/TeacherChatDirectory';
 import ChatThreadScreen from '../screens/chat/ChatThreadScreen';
+import ProgressScreen from '../screens/teacher/ProgressScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -72,6 +73,18 @@ const ChatStack = () => (
   </Stack.Navigator>
 );
 
+const ProgressStack = () => (
+  <Stack.Navigator>
+    <Stack.Screen
+      name="TeacherProgress"
+      component={ProgressScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
+  </Stack.Navigator>
+);
+
 const TeacherTabs = () => (
   // @ts-ignore - id prop type issue with react-navigation v7
   <Tab.Navigator
@@ -111,6 +124,14 @@ const TeacherTabs = () => (
       options={{
         tabBarLabel: 'Calendar',
         tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>📅</Text>,
+      }}
+    />
+    <Tab.Screen
+      name="TeacherProgressTab"
+      component={ProgressStack}
+      options={{
+        tabBarLabel: 'Progress',
+        tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>📊</Text>,
       }}
     />
     <Tab.Screen

@@ -53,13 +53,13 @@ const HomePlaceholder = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.welcomeText}>Welcome back, {user?.fullName?.split(' ')[0]}!</Text>
+          <Text style={styles.welcomeText}>Welcome back, {(user as any)?.name?.split(' ')[0]}!</Text>
           <Text style={styles.subtitle}>School Management Dashboard</Text>
         </View>
 
         <View style={styles.userCard}>
           <Text style={styles.roleIcon}>{getRoleIcon(user?.role || '')}</Text>
-          <Text style={styles.userName}>{user?.fullName}</Text>
+          <Text style={styles.userName}>{(user as any)?.name}</Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
           <View style={styles.roleBadge}>
             <Text style={styles.roleText}>

@@ -34,7 +34,7 @@ const LoginScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Padmai</Text>
+      <Text style={styles.title}>Kilbil School</Text>
       <Text style={styles.subtitle}>School Management System</Text>
       
       <View style={styles.form}>

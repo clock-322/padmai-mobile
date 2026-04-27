@@ -68,35 +68,56 @@ const StatisticsScreen = () => {
       };
     });
 
+    studentStats.sort((a, b) => {
+      const aNum = parseInt(a.id.replace(/\D/g, ''), 10) || 0;
+      const bNum = parseInt(b.id.replace(/\D/g, ''), 10) || 0;
+      return aNum - bNum;
+    });
+
     setAttendanceData(studentStats);
   };
 
-  const loadProgressData = () => {
-    // Generate mock progress data
-    const progress = students.map(student => ({
-      ...student,
-      className: student.classId.replace('class_', 'Class '),
-      mathGrade: Math.floor(Math.random() * 40) + 60, // 60-100
-      englishGrade: Math.floor(Math.random() * 40) + 60,
-      scienceGrade: Math.floor(Math.random() * 40) + 60,
-      averageGrade: 0,
-    }));
+  const seededRandom = (seed: number) => {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  };
 
-    // Calculate average grades
-    progress.forEach(student => {
-      student.averageGrade = Math.round((student.mathGrade + student.englishGrade + student.scienceGrade) / 3);
+  const loadProgressData = () => {
+    let filteredStudents = [...students];
+    if (selectedClass !== 'all') {
+      filteredStudents = students.filter(s => s.classId === selectedClass);
+    }
+    // Sort by numeric part of student ID
+    filteredStudents.sort((a, b) => {
+      const aNum = parseInt(a.id.replace(/\D/g, ''), 10) || 0;
+      const bNum = parseInt(b.id.replace(/\D/g, ''), 10) || 0;
+      return aNum - bNum;
+    });
+
+    const progress = filteredStudents.map(student => {
+      const idNum = parseInt(student.id.replace(/\D/g, ''), 10) || 1;
+      const mathGrade = Math.floor(seededRandom(idNum * 3 + 1) * 40) + 60;
+      const englishGrade = Math.floor(seededRandom(idNum * 7 + 2) * 40) + 60;
+      const scienceGrade = Math.floor(seededRandom(idNum * 11 + 3) * 40) + 60;
+      return {
+        ...student,
+        className: student.classId.replace('class_', 'Class '),
+        mathGrade,
+        englishGrade,
+        scienceGrade,
+        averageGrade: Math.round((mathGrade + englishGrade + scienceGrade) / 3),
+      };
     });
 
     setProgressData(progress);
   };
 
   const getClassOptions = () => {
-    const classes = [...new Set(students.map(s => s.classId))];
     return [
       { id: 'all', name: 'All Classes' },
-      ...classes.map(classId => ({
-        id: classId,
-        name: classId.replace('class_', 'Class '),
+      ...Array.from({ length: 12 }, (_, i) => ({
+        id: `class_${i + 1}`,
+        name: `Class ${i + 1}`,
       })),
     ];
   };
@@ -209,27 +230,33 @@ const StatisticsScreen = () => {
       {/* Attendance Chart */}
       <View style={styles.chartSection}>
         <Text style={styles.sectionTitle}>Attendance by Class</Text>
-        {[...new Set(attendanceData.map(s => s.className))].map(className => {
-          const classStudents = attendanceData.filter(s => s.className === className);
-          const avgPercentage = classStudents.length > 0 
+        {Array.from({ length: 12 }, (_, i) => {
+          const className = `Class ${i + 1}`;
+          const classId   = `class_${i + 1}`;
+          const classStudents = attendanceData.filter(
+            s => s.className === className || s.classId === classId
+          );
+          const avgPercentage = classStudents.length > 0
             ? Math.round(classStudents.reduce((sum, s) => sum + s.percentage, 0) / classStudents.length)
             : 0;
-          
+
           return (
             <View key={className} style={styles.chartItem}>
               <View style={styles.chartHeader}>
                 <Text style={styles.chartLabel}>{className}</Text>
-                <Text style={styles.chartValue}>{avgPercentage}%</Text>
+                <Text style={[styles.chartValue, { color: getAttendanceColor(avgPercentage) }]}>
+                  {avgPercentage}%
+                </Text>
               </View>
               <View style={styles.chartBar}>
-                <View 
+                <View
                   style={[
-                    styles.chartFill, 
-                    { 
+                    styles.chartFill,
+                    {
                       width: `${avgPercentage}%`,
-                      backgroundColor: getAttendanceColor(avgPercentage)
-                    }
-                  ]} 
+                      backgroundColor: getAttendanceColor(avgPercentage),
+                    },
+                  ]}
                 />
               </View>
             </View>
@@ -255,7 +282,7 @@ const StatisticsScreen = () => {
               </View>
               <View style={styles.studentDetails}>
                 <Text style={styles.studentName}>{student.name}</Text>
-                <Text style={styles.studentClass}>{student.className}</Text>
+                <Text style={styles.studentClass}>{student.className} · ID: {student.id}</Text>
                 <Text style={styles.attendanceDetails}>
                   {student.present} of {student.total} days
                 </Text>
@@ -361,7 +388,7 @@ const StatisticsScreen = () => {
               </View>
               <View style={styles.studentDetails}>
                 <Text style={styles.studentName}>{student.name}</Text>
-                <Text style={styles.studentClass}>{student.className}</Text>
+                <Text style={styles.studentClass}>{student.className} · ID: {student.id}</Text>
               </View>
             </View>
             <View style={styles.gradesContainer}>
@@ -402,16 +429,20 @@ const StatisticsScreen = () => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Text style={styles.logo}>📚 Padmai</Text>
+            <Text style={styles.logo}>🏫 Kilbil School</Text>
             <View style={styles.headerRight}>
-              <Text style={styles.welcomeText}>Welcome, {user?.fullName?.split(' ')[0]}!</Text>
+              <Text style={styles.welcomeText}>Welcome, {(user as any)?.name?.split(' ')[0]}!</Text>
               <AdminHeaderRight />
             </View>
           </View>
           <View style={styles.adminInfo}>
-            <Text style={styles.adminAvatar}>👨‍💼</Text>
+            <View style={styles.adminAvatarCircle}>
+              <Text style={styles.adminAvatarInitials}>
+                {(user as any)?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'A'}
+              </Text>
+            </View>
             <View style={styles.adminDetails}>
-              <Text style={styles.adminName}>{user?.fullName}</Text>
+              <Text style={styles.adminName}>{(user as any)?.name}</Text>
               <Text style={styles.adminRole}>School Administrator</Text>
             </View>
           </View>
@@ -488,9 +519,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  adminAvatar: {
-    fontSize: 28,
+  adminAvatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 14,
+  },
+  adminAvatarInitials: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.5,
   },
   adminDetails: {
     flex: 1,

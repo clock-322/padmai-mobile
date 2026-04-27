@@ -6,6 +6,8 @@ export interface PaymentApiItem {
   name: string; // e.g., Tuition Fee
   amount: number;
   paymentType: string; // e.g., Monthly
+  status?: 'paid' | 'pending' | 'overdue' | 'due'; // payment status from backend
+  dueDate?: string;
   createdAt: string;
   updatedAt: string;
 }

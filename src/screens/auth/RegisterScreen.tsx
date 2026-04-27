@@ -92,7 +92,7 @@ const RegisterScreen = ({ onNavigateToLogin }: RegisterScreenProps) => {
 
       dispatch(setCredentials({ token, user: userForState }));
       await persistCredentials(token, userForState);
-      showToast('Registration successful! Welcome to Padmai!', 'success');
+      showToast('Registration successful! Welcome to Kilbil School!', 'success');
     } catch (error: any) {
       const apiMessage = error?.data?.message || 'Registration failed. Please try again.';
       showToast(apiMessage, 'error');
@@ -107,7 +107,7 @@ const RegisterScreen = ({ onNavigateToLogin }: RegisterScreenProps) => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.logo}>Padmai</Text>
+          <Text style={styles.logo}>Kilbil School</Text>
           <Text style={styles.subtitle}>Create Your Account</Text>
         </View>
 

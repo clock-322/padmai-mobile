@@ -11,7 +11,16 @@ type RegisterResponse = {
   success: boolean;
   message: string;
   data: {
-    user: { id: string; name: string; email: string; role: 'parent' | 'teacher' | 'admin' };
+    user: {
+      id: string;
+      name: string;
+      email: string;
+      role: 'parent' | 'teacher' | 'admin';
+      childId?: string;
+      subject?: string;
+      class?: string;
+      section?: string;
+    };
     token: string;
   };
 };

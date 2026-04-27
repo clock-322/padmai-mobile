@@ -8,9 +8,12 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../providers/DataProvider';
+import { useGetTeacherByIdQuery } from '../../store/services/teachersApi';
 import TeacherHeaderRight from '../../components/teacher/TeacherHeaderRight';
 import ProfileModal from './ProfileModal';
 import MonthGrid from '../../components/calendar/MonthGrid';
@@ -18,7 +21,10 @@ import EventListItem from '../../components/EventListItem';
 
 const CalendarScreen = () => {
   const { user } = useAuth();
-  const { events, users, students } = useData();
+  const { events, users, students, addEvent, removeEvent } = useData();
+  const { data: teacherProfileData } = useGetTeacherByIdQuery(user?.id ?? '', {
+    skip: !user?.id,
+  });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [filteredEvents, setFilteredEvents] = useState<any[]>([]);
@@ -26,6 +32,8 @@ const CalendarScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [eventForm, setEventForm] = useState({ title: '', time: '', notes: '', type: 'event' });
 
   useEffect(() => {
     loadEvents();
@@ -74,9 +82,55 @@ const CalendarScreen = () => {
     setModalVisible(true);
   };
 
+  const EVENT_TYPES = [
+    { value: 'event', label: 'Event', color: '#2F6FED' },
+    { value: 'holiday', label: 'Holiday', color: '#FF9800' },
+    { value: 'test', label: 'Test', color: '#DC3545' },
+    { value: 'meeting', label: 'Meeting', color: '#28A745' },
+  ];
+
   const handleCreateEvent = () => {
-    // TODO: Navigate to event editor
-    console.debug('Create event functionality will be implemented');
+    setEventForm({ title: '', time: '09:00', notes: '', type: 'event' });
+    setCreateModalVisible(true);
+  };
+
+  const confirmCreateEvent = () => {
+    if (!eventForm.title) {
+      Alert.alert('Error', 'Please enter a title');
+      return;
+    }
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    const time = eventForm.time || '09:00';
+    const newEvent: any = {
+      id: `event_${Date.now()}`,
+      title: eventForm.title,
+      date: `${dateStr}T${time}:00.000Z`,
+      type: eventForm.type,
+      notes: eventForm.notes,
+      createdBy: (user as any)?.id || 'teacher',
+    };
+    addEvent(newEvent);
+    setCreateModalVisible(false);
+    Alert.alert('Event Created', `"${newEvent.title}" has been added to the calendar.`);
+  };
+
+  const handleDeleteEvent = (event: any) => {
+    Alert.alert(
+      'Delete Event',
+      `Delete "${event.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            removeEvent(event.id);
+            setModalVisible(false);
+            Alert.alert('Deleted', 'Event has been removed.');
+          },
+        },
+      ]
+    );
   };
 
   const getEventsForSelectedDate = () => {
@@ -123,10 +177,10 @@ const CalendarScreen = () => {
           <View style={styles.headerLeft}>
             <View style={styles.appBranding}>
               <Text style={styles.appIcon}>📚</Text>
-              <Text style={styles.appName}>Padmai</Text>
+              <Text style={styles.appName}>Kilbil School</Text>
             </View>
             <View style={styles.welcomeSection}>
-              <Text style={styles.welcomeText}>Welcome, {user?.fullName?.split(' ')[0] || 'Teacher'}!</Text>
+              <Text style={styles.welcomeText}>Welcome, {(user as any)?.name?.split(' ')[0] || 'Teacher'}!</Text>
               <TeacherHeaderRight onPress={() => setProfileModalVisible(true)} />
             </View>
           </View>
@@ -137,8 +191,14 @@ const CalendarScreen = () => {
             <Text style={styles.teacherAvatarText}>👨‍🏫</Text>
           </View>
           <View style={styles.teacherDetails}>
-            <Text style={styles.teacherName}>{user?.fullName || 'Teacher Name'}</Text>
-            <Text style={styles.teacherRole}>Mathematics Teacher</Text>
+            <Text style={styles.teacherName}>{(user as any)?.name || 'Teacher Name'}</Text>
+            <Text style={styles.teacherRole}>
+              {teacherProfileData?.data?.teacher?.subject
+                ? `${teacherProfileData.data.teacher.subject} Teacher`
+                : (user as any)?.subject
+                ? `${(user as any).subject} Teacher`
+                : 'Teacher'}
+            </Text>
           </View>
         </View>
       </View>
@@ -253,10 +313,7 @@ const CalendarScreen = () => {
                 </Text>
                 
                 <View style={styles.modalActions}>
-                  <TouchableOpacity style={styles.actionButton}>
-                    <Text style={styles.actionButtonText}>Edit Event</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.actionButton, styles.deleteButton]}>
+                  <TouchableOpacity style={[styles.actionButton, styles.deleteButton]} onPress={() => selectedEvent && handleDeleteEvent(selectedEvent)}>
                     <Text style={styles.actionButtonText}>Delete Event</Text>
                   </TouchableOpacity>
                 </View>
@@ -266,6 +323,69 @@ const CalendarScreen = () => {
         </View>
       </Modal>
       
+      {/* Create Event Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={createModalVisible}
+        onRequestClose={() => setCreateModalVisible(false)}
+      >
+        <View style={styles.createModalOverlay}>
+          <View style={styles.createModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Create Event</Text>
+              <TouchableOpacity onPress={() => setCreateModalVisible(false)}>
+                <Text style={styles.closeButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.createInputLabel}>Type</Text>
+            <View style={styles.typeButtons}>
+              {EVENT_TYPES.map(t => (
+                <TouchableOpacity
+                  key={t.value}
+                  style={[styles.typeButton, eventForm.type === t.value && { backgroundColor: t.color, borderColor: t.color }]}
+                  onPress={() => setEventForm(prev => ({ ...prev, type: t.value }))}
+                >
+                  <Text style={[styles.typeButtonText, eventForm.type === t.value && { color: '#fff' }]}>{t.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.createInputLabel}>Title *</Text>
+            <TextInput
+              style={styles.createInput}
+              placeholder="Event title"
+              value={eventForm.title}
+              onChangeText={v => setEventForm(prev => ({ ...prev, title: v }))}
+            />
+            <Text style={styles.createInputLabel}>Time (HH:MM)</Text>
+            <TextInput
+              style={styles.createInput}
+              placeholder="09:00"
+              value={eventForm.time}
+              onChangeText={v => setEventForm(prev => ({ ...prev, time: v }))}
+            />
+            <Text style={styles.createInputLabel}>Notes</Text>
+            <TextInput
+              style={[styles.createInput, styles.createInputMultiline]}
+              placeholder="Optional notes..."
+              multiline
+              numberOfLines={3}
+              value={eventForm.notes}
+              onChangeText={v => setEventForm(prev => ({ ...prev, notes: v }))}
+            />
+            <View style={styles.createModalActions}>
+              <TouchableOpacity style={[styles.createModalButton, styles.createCancelButton]} onPress={() => setCreateModalVisible(false)}>
+                <Text style={styles.createCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.createModalButton, styles.createConfirmButton]} onPress={confirmCreateEvent}>
+                <Text style={styles.createConfirmButtonText}>Create</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <ProfileModal
         visible={profileModalVisible}
         onClose={() => setProfileModalVisible(false)}
@@ -545,6 +665,88 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  createModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  createModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+  },
+  typeButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 4,
+  },
+  typeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#dee2e6',
+    backgroundColor: '#f8f9fa',
+  },
+  typeButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#495057',
+  },
+  createInputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#495057',
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  createInput: {
+    borderWidth: 1.5,
+    borderColor: '#dee2e6',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#212529',
+    marginBottom: 4,
+  },
+  createInputMultiline: {
+    minHeight: 70,
+    textAlignVertical: 'top',
+  },
+  createModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  createModalButton: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  createCancelButton: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1.5,
+    borderColor: '#dee2e6',
+  },
+  createConfirmButton: {
+    backgroundColor: '#2F6FED',
+  },
+  createCancelButtonText: {
+    color: '#495057',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  createConfirmButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
 

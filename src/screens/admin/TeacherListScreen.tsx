@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,10 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -21,6 +24,26 @@ import {
 } from '../../store/services/teachersApi';
 import AdminHeaderRight from '../../components/admin/AdminHeaderRight';
 
+const TEACHER_SUBJECTS_KEY = 'kilbil_teacher_subjects';
+
+// Load all stored subjects { [teacherId]: subject }
+const loadStoredSubjects = async (): Promise<Record<string, string>> => {
+  try {
+    const raw = await AsyncStorage.getItem(TEACHER_SUBJECTS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const saveSubjectForTeacher = async (teacherId: string, subject: string) => {
+  try {
+    const existing = await loadStoredSubjects();
+    existing[teacherId] = subject;
+    await AsyncStorage.setItem(TEACHER_SUBJECTS_KEY, JSON.stringify(existing));
+  } catch {}
+};
+
 const TeacherListScreen = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
@@ -29,10 +52,17 @@ const TeacherListScreen = () => {
   const [assignTeacherClass, { isLoading: isAssigning }] = useAssignTeacherClassMutation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([]);
+  const [storedSubjects, setStoredSubjects] = useState<Record<string, string>>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [classValue, setClassValue] = useState('');
   const [sectionValue, setSectionValue] = useState('');
+  const [subjectValue, setSubjectValue] = useState('');
+
+  // Load stored subjects on mount
+  useEffect(() => {
+    loadStoredSubjects().then(setStoredSubjects);
+  }, []);
 
   // Verify admin access
   useEffect(() => {
@@ -70,14 +100,16 @@ const TeacherListScreen = () => {
     setSelectedTeacher(teacher);
     setClassValue(teacher.class || '');
     setSectionValue(teacher.section || '');
+    // subject comes from local storage since backend doesn't persist it
+    setSubjectValue(storedSubjects[teacher._id] || teacher.subject || '');
     setModalVisible(true);
   };
 
   const handleAssignSubmit = async () => {
     if (!selectedTeacher) return;
 
-    if (!classValue.trim() || !sectionValue.trim()) {
-      Alert.alert('Validation Error', 'Please enter both class and section');
+    if (!classValue.trim() || !sectionValue.trim() || !subjectValue.trim()) {
+      Alert.alert('Validation Error', 'Please enter class, section, and subject');
       return;
     }
 
@@ -87,6 +119,7 @@ const TeacherListScreen = () => {
         ...selectedTeacher,
         class: classValue.trim(),
         section: sectionValue.trim(),
+        subject: subjectValue.trim(),
       };
 
       // Update local state optimistically
@@ -107,15 +140,22 @@ const TeacherListScreen = () => {
         );
       }
 
+      // Save subject locally (backend doesn't persist it)
+      const subjectTrimmed = subjectValue.trim();
+      await saveSubjectForTeacher(selectedTeacher._id, subjectTrimmed);
+      const updatedSubjects = { ...storedSubjects, [selectedTeacher._id]: subjectTrimmed };
+      setStoredSubjects(updatedSubjects);
+
       // Close modal immediately for fast UI feedback
       setModalVisible(false);
       showToast('Assignment updated successfully!', 'success');
 
-      // Make API call
+      // Make API call (class + section saved on backend)
       await assignTeacherClass({
         teacherId: selectedTeacher._id,
         class: classValue.trim(),
         section: sectionValue.trim(),
+        subject: subjectTrimmed,
       }).unwrap();
 
       // Refetch to ensure data is in sync
@@ -136,6 +176,7 @@ const TeacherListScreen = () => {
     setSelectedTeacher(null);
     setClassValue('');
     setSectionValue('');
+    setSubjectValue('');
   };
 
   if (isLoading) {
@@ -225,11 +266,15 @@ const TeacherListScreen = () => {
                 <View style={styles.teacherDetails}>
                   <View style={styles.assignmentRow}>
                     <View style={styles.assignmentInfo}>
-                      <Text style={styles.assignmentLabel}>Class & Section:</Text>
+                      <Text style={styles.assignmentLabel}>Subject:</Text>
+                      <Text style={styles.assignmentValue}>
+                        {storedSubjects[teacher._id] || teacher.subject || 'Not assigned'}
+                      </Text>
+                      <Text style={[styles.assignmentLabel, { marginTop: 6 }]}>Class & Section:</Text>
                       <Text style={styles.assignmentValue}>
                         {teacher.class && teacher.section
-                          ? `${teacher.class} - ${teacher.section}`
-                          : 'Unassigned'}
+                          ? `Class ${teacher.class} - Section ${teacher.section}`
+                          : 'Not assigned'}
                       </Text>
                     </View>
                     <TouchableOpacity
@@ -256,72 +301,98 @@ const TeacherListScreen = () => {
         animationType="slide"
         onRequestClose={handleModalClose}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Assign Class & Section</Text>
-              <TouchableOpacity onPress={handleModalClose}>
-                <Text style={styles.modalCloseButton}>✕</Text>
-              </TouchableOpacity>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Assign Subject & Class</Text>
+                <TouchableOpacity onPress={handleModalClose}>
+                  <Text style={styles.modalCloseButton}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              {selectedTeacher && (
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <View style={styles.modalTeacherInfo}>
+                    <Text style={styles.modalTeacherName}>{selectedTeacher.name}</Text>
+                    <Text style={styles.modalTeacherEmail}>{selectedTeacher.email}</Text>
+                  </View>
+
+                  <View style={styles.modalForm}>
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.inputLabel}>Subject *</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="e.g., Mathematics, Science, English"
+                        placeholderTextColor="#999"
+                        value={subjectValue}
+                        onChangeText={setSubjectValue}
+                        autoCapitalize="words"
+                      />
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.inputLabel}>Class *</Text>
+                      <View style={styles.pillRow}>
+                        {['1','2','3','4','5','6','7','8','9','10','11','12'].map((cls) => (
+                          <TouchableOpacity
+                            key={cls}
+                            style={[styles.pill, classValue === cls && styles.pillActive]}
+                            onPress={() => setClassValue(cls)}
+                          >
+                            <Text style={[styles.pillText, classValue === cls && styles.pillTextActive]}>
+                              {cls}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.inputLabel}>Section *</Text>
+                      <View style={styles.pillRow}>
+                        {['A','B','C','D','E'].map((sec) => (
+                          <TouchableOpacity
+                            key={sec}
+                            style={[styles.pill, styles.pillWide, sectionValue === sec && styles.pillActive]}
+                            onPress={() => setSectionValue(sec)}
+                          >
+                            <Text style={[styles.pillText, sectionValue === sec && styles.pillTextActive]}>
+                              {sec}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.modalButtons}>
+                      <TouchableOpacity
+                        style={[styles.modalButton, styles.cancelButton]}
+                        onPress={handleModalClose}
+                      >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.modalButton, styles.saveButton, isAssigning && styles.saveButtonDisabled]}
+                        onPress={handleAssignSubmit}
+                        disabled={isAssigning}
+                      >
+                        {isAssigning ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Text style={styles.saveButtonText}>Save</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </ScrollView>
+              )}
             </View>
-
-            {selectedTeacher && (
-              <>
-                <View style={styles.modalTeacherInfo}>
-                  <Text style={styles.modalTeacherName}>{selectedTeacher.name}</Text>
-                  <Text style={styles.modalTeacherEmail}>{selectedTeacher.email}</Text>
-                </View>
-
-                <View style={styles.modalForm}>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Class *</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="e.g., 10, 11, 12"
-                      placeholderTextColor="#999"
-                      value={classValue}
-                      onChangeText={setClassValue}
-                      autoCapitalize="none"
-                    />
-                  </View>
-
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Section *</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="e.g., A, B, C"
-                      placeholderTextColor="#999"
-                      value={sectionValue}
-                      onChangeText={setSectionValue}
-                      autoCapitalize="characters"
-                      maxLength={1}
-                    />
-                  </View>
-
-                  <View style={styles.modalButtons}>
-                    <TouchableOpacity
-                      style={[styles.modalButton, styles.cancelButton]}
-                      onPress={handleModalClose}
-                    >
-                      <Text style={styles.cancelButtonText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.modalButton, styles.saveButton, isAssigning && styles.saveButtonDisabled]}
-                      onPress={handleAssignSubmit}
-                      disabled={isAssigning}
-                    >
-                      {isAssigning ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                      ) : (
-                        <Text style={styles.saveButtonText}>Save</Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </>
-            )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -513,7 +584,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   modalContent: {
     backgroundColor: '#fff',
@@ -605,6 +675,36 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  pillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  pill: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: '#f0f2f5',
+    borderWidth: 1,
+    borderColor: '#e0e4ea',
+    minWidth: 44,
+    alignItems: 'center',
+  },
+  pillWide: {
+    paddingHorizontal: 20,
+  },
+  pillActive: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
+  },
+  pillText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+  },
+  pillTextActive: {
+    color: '#fff',
   },
 });
 

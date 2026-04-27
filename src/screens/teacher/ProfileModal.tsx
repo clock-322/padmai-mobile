@@ -9,8 +9,8 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
-import { useData } from '../../providers/DataProvider';
 import EditProfileModal from '../../components/EditProfileModal';
+import { useGetTeacherByIdQuery } from '../../store/services/teachersApi';
 
 interface ProfileModalProps {
   visible: boolean;
@@ -19,8 +19,13 @@ interface ProfileModalProps {
 
 const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) => {
   const { user, logout } = useAuth();
-  const { students } = useData();
   const [showEditModal, setShowEditModal] = useState(false);
+
+  const { data: teacherProfileData, isLoading: isLoadingProfile } = useGetTeacherByIdQuery(
+    (user as any)?.id ?? '',
+    { skip: !(user as any)?.id }
+  );
+  const teacherProfile = teacherProfileData?.data?.teacher;
 
   const handleLogout = () => {
     try {
@@ -35,13 +40,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) => {
   };
 
   const handleSwitchClass = () => {
-    // TODO: Implement class switching
     console.debug('Switch class functionality will be implemented');
-  };
-
-  const getTeacherClasses = () => {
-    // TODO: Get teacher's classes from data
-    return ['Class 1A', 'Class 2B', 'Class 3C'];
   };
 
   return (
@@ -64,23 +63,48 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) => {
             <View style={styles.profileSection}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
-                  {user?.fullName?.charAt(0) || 'T'}
+                  {(user as any)?.name?.charAt(0) || 'T'}
                 </Text>
               </View>
-              <Text style={styles.name}>{user?.fullName || 'Teacher'}</Text>
+              <Text style={styles.name}>{(user as any)?.name || 'Teacher'}</Text>
               <Text style={styles.email}>{user?.email || 'teacher@school.com'}</Text>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>My Classes</Text>
-              {getTeacherClasses().map((className, index) => (
-                <View key={index} style={styles.classItem}>
-                  <Text style={styles.className}>{className}</Text>
-                  <Text style={styles.studentCount}>
-                    {students.filter(s => s.classId === `class_${index + 1}`).length} students
-                  </Text>
+              <Text style={styles.sectionTitle}>My Assignment</Text>
+              {isLoadingProfile ? (
+                <View style={styles.classItem}>
+                  <Text style={styles.className}>Loading...</Text>
                 </View>
-              ))}
+              ) : teacherProfile?.class && teacherProfile?.section ? (
+                <>
+                  <View style={styles.assignmentRow}>
+                    <Text style={styles.assignmentLabel}>Class</Text>
+                    <Text style={styles.assignmentValue}>
+                      Class {teacherProfile.class} – Section {teacherProfile.section}
+                    </Text>
+                  </View>
+                  {teacherProfile?.subject ? (
+                    <View style={styles.assignmentRow}>
+                      <Text style={styles.assignmentLabel}>Subject</Text>
+                      <Text style={styles.assignmentValue}>{teacherProfile.subject}</Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.assignmentRow}>
+                    <Text style={styles.assignmentLabel}>Role</Text>
+                    <Text style={styles.assignmentValue}>
+                      {teacherProfile?.subject
+                        ? `${teacherProfile.subject} Teacher`
+                        : 'Class Teacher'}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.classItem}>
+                  <Text style={styles.className}>No class assigned yet</Text>
+                  <Text style={styles.studentCount}>Contact admin to get assigned</Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.section}>
@@ -194,6 +218,26 @@ const styles = StyleSheet.create({
   studentCount: {
     fontSize: 14,
     color: '#666',
+  },
+  assignmentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  assignmentLabel: {
+    fontSize: 14,
+    color: '#888',
+    fontWeight: '500',
+  },
+  assignmentValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#2F6FED',
   },
   actionButton: {
     backgroundColor: '#2F6FED',

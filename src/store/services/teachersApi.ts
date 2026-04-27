@@ -9,6 +9,7 @@ export interface Teacher {
   updatedAt: string;
   class: string | null;
   section: string | null;
+  subject: string | null;
 }
 
 export interface GetTeachersResponse {
@@ -46,9 +47,18 @@ export interface AssignTeacherClassPayload {
   teacherId: string;
   class: string;
   section: string;
+  subject: string;
 }
 
 export interface AssignTeacherClassResponse {
+  success: boolean;
+  message: string;
+  data: {
+    teacher: Teacher;
+  };
+}
+
+export interface GetTeacherByIdResponse {
   success: boolean;
   message: string;
   data: {
@@ -61,6 +71,12 @@ export const teachersApi = baseApi.injectEndpoints({
     getTeachers: builder.query<GetTeachersResponse, void>({
       query: () => ({
         url: '/getTeachers',
+        method: 'GET',
+      }),
+    }),
+    getTeacherById: builder.query<GetTeacherByIdResponse, string>({
+      query: (teacherId) => ({
+        url: `/getTeacher/${teacherId}`,
         method: 'GET',
       }),
     }),
@@ -78,6 +94,7 @@ export const teachersApi = baseApi.injectEndpoints({
           teacherId: body.teacherId,
           class: body.class,
           section: body.section,
+          subject: body.subject,
         },
       }),
     }),
@@ -86,6 +103,7 @@ export const teachersApi = baseApi.injectEndpoints({
 
 export const {
   useGetTeachersQuery,
+  useGetTeacherByIdQuery,
   useGetAllStudentsQuery,
   useAssignTeacherClassMutation,
 } = teachersApi;

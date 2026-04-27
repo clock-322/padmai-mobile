@@ -16,12 +16,15 @@ import ProfileModal from './ProfileModal';
 
 const TeacherChatDirectory = () => {
   const { user } = useAuth();
-  const { students, users, chats, chatMessages } = useData();
+  const { students, users, chats, chatMessages, teachers } = useData();
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(true);
   const [chatThreads, setChatThreads] = useState<any[]>([]);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
-  const [selectedClass, setSelectedClass] = useState('class_1');
+
+  const teacherData = teachers.find(t => t.id === (user as any)?.id || t.email === (user as any)?.email);
+  const teacherClasses: string[] = teacherData?.classes || ['class_1'];
+  const [selectedClass, setSelectedClass] = useState(teacherClasses[0] || 'class_1');
 
   useEffect(() => {
     loadChatThreads();
@@ -74,11 +77,10 @@ const TeacherChatDirectory = () => {
   };
 
   const getClassOptions = () => {
-    return [
-      { id: 'class_1', name: 'Class 1A' },
-      { id: 'class_2', name: 'Class 2B' },
-      { id: 'class_3', name: 'Class 3C' },
-    ];
+    return teacherClasses.map(c => ({
+      id: c,
+      name: c.replace('class_', 'Class '),
+    }));
   };
 
   const formatTime = (dateString: string) => {
@@ -125,16 +127,16 @@ const TeacherChatDirectory = () => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Text style={styles.logo}>📚 Padmai</Text>
+            <Text style={styles.logo}>🏫 Kilbil School</Text>
             <View style={styles.headerRight}>
-              <Text style={styles.welcomeText}>Welcome, {user?.fullName?.split(' ')[0]}!</Text>
+              <Text style={styles.welcomeText}>Welcome, {(user as any)?.name?.split(' ')[0]}!</Text>
               <TeacherHeaderRight onPress={() => setProfileModalVisible(true)} />
             </View>
           </View>
           <View style={styles.teacherInfo}>
             <Text style={styles.teacherAvatar}>👩‍🏫</Text>
             <View style={styles.teacherDetails}>
-              <Text style={styles.teacherName}>{user?.fullName}</Text>
+              <Text style={styles.teacherName}>{(user as any)?.name}</Text>
               <Text style={styles.teacherRole}>Teacher</Text>
             </View>
           </View>
@@ -221,31 +223,6 @@ const TeacherChatDirectory = () => {
           )}
         </View>
 
-        {/* Recent Activity */}
-        <View style={styles.activitySection}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          <View style={styles.activityItem}>
-            <Text style={styles.activityIcon}>📝</Text>
-            <View style={styles.activityContent}>
-              <Text style={styles.activityText}>Created Math assignment for Class 1A</Text>
-              <Text style={styles.activityTime}>2 hours ago</Text>
-            </View>
-          </View>
-          <View style={styles.activityItem}>
-            <Text style={styles.activityIcon}>💬</Text>
-            <View style={styles.activityContent}>
-              <Text style={styles.activityText}>Received message from Sarah's parent</Text>
-              <Text style={styles.activityTime}>4 hours ago</Text>
-            </View>
-          </View>
-          <View style={styles.activityItem}>
-            <Text style={styles.activityIcon}>📅</Text>
-            <View style={styles.activityContent}>
-              <Text style={styles.activityText}>Added parent meeting to calendar</Text>
-              <Text style={styles.activityTime}>1 day ago</Text>
-            </View>
-          </View>
-        </View>
       </ScrollView>
       
       <ProfileModal

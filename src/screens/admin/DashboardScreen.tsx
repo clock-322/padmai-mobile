@@ -192,16 +192,18 @@ const DashboardScreen = () => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Text style={styles.logo}>📚 Padmai</Text>
+            <Text style={styles.logo}>🏫 Kilbil School</Text>
             <View style={styles.headerRight}>
-              <Text style={styles.welcomeText}>Welcome, {user?.fullName?.split(' ')[0]}!</Text>
+              <Text style={styles.welcomeText}>Welcome, {(user as any)?.name?.split(' ')[0]}!</Text>
               <AdminHeaderRight />
             </View>
           </View>
           <View style={styles.adminInfo}>
-            <Text style={styles.adminAvatar}>👨‍💼</Text>
+            <View style={styles.adminAvatarCircle}>
+              <Text style={styles.adminAvatarEmoji}>👨‍💼</Text>
+            </View>
             <View style={styles.adminDetails}>
-              <Text style={styles.adminName}>{user?.fullName}</Text>
+              <Text style={styles.adminName}>{(user as any)?.name}</Text>
               <Text style={styles.adminRole}>School Administrator</Text>
             </View>
           </View>
@@ -393,9 +395,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  adminAvatar: {
-    fontSize: 28,
+  adminAvatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 14,
+  },
+  adminAvatarEmoji: {
+    fontSize: 26,
   },
   adminDetails: {
     flex: 1,

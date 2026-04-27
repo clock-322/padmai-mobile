@@ -10,10 +10,12 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGetClassStudentsMutation } from '../../store/services/studentsApi';
 import { ClassStudentApi, GetClassStudentsSuccessResponse } from '../../types/students';
+import { useGetTeacherByIdQuery } from '../../store/services/teachersApi';
 import TeacherHeaderRight from '../../components/teacher/TeacherHeaderRight';
 import ProfileModal from './ProfileModal';
 import EmptyClassState from '../../components/teacher/EmptyClassState';
@@ -27,9 +29,13 @@ const DashboardScreen = () => {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const [getClassStudents] = useGetClassStudentsMutation();
+  const { data: teacherProfileData } = useGetTeacherByIdQuery(user?.id ?? '', {
+    skip: !user?.id,
+  });
   const [classData, setClassData] = useState<GetClassStudentsSuccessResponse['data'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [localSubject, setLocalSubject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('name');
   const [isCarouselVisible, setIsCarouselVisible] = useState(false);
@@ -37,6 +43,15 @@ const DashboardScreen = () => {
   useEffect(() => {
     loadClassStudents();
     trackWelcomeCardImpression('teacher');
+    // Load subject from local storage (backend doesn't persist subject field)
+    if (user?.id) {
+      AsyncStorage.getItem('kilbil_teacher_subjects').then((raw) => {
+        if (raw) {
+          const map = JSON.parse(raw);
+          if (map[user.id]) setLocalSubject(map[user.id]);
+        }
+      }).catch(() => {});
+    }
   }, []);
 
   const loadClassStudents = async () => {
@@ -46,8 +61,14 @@ const DashboardScreen = () => {
     }
 
     setLoading(true);
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 8000)
+    );
     try {
-      const response = await getClassStudents({ teacherId: user.id }).unwrap();
+      const response = await Promise.race([
+        getClassStudents({ teacherId: user.id }).unwrap(),
+        timeout,
+      ]) as any;
       if (response.success) {
         setClassData(response.data);
       } else {
@@ -56,10 +77,6 @@ const DashboardScreen = () => {
     } catch (error: any) {
       console.error('Error loading class students:', error);
       setClassData(null);
-      // Don't show error alert if it's just "no class assigned"
-      if (error?.data?.message !== 'No class assigned yet' && error?.data?.success !== false) {
-        Alert.alert('Error', 'Failed to load class data. Please try again.');
-      }
     } finally {
       setLoading(false);
     }
@@ -146,17 +163,33 @@ const DashboardScreen = () => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Text style={styles.logo}>📚 Padmai</Text>
+            <Text style={styles.logo}>🏫 Kilbil School</Text>
             <View style={styles.headerRight}>
-              <Text style={styles.welcomeText}>Welcome, {user?.fullName?.split(' ')[0]}!</Text>
+              <Text style={styles.welcomeText}>Welcome, {(user as any)?.name?.split(' ')[0]}!</Text>
               <TeacherHeaderRight onPress={() => setProfileModalVisible(true)} />
             </View>
           </View>
           <View style={styles.teacherInfo}>
             <Text style={styles.teacherAvatar}>👩‍🏫</Text>
             <View style={styles.teacherDetails}>
-              <Text style={styles.teacherName}>{user?.fullName}</Text>
-              <Text style={styles.teacherRole}>Mathematics Teacher</Text>
+              <Text style={styles.teacherName}>{(user as any)?.name}</Text>
+              <Text style={styles.teacherRole}>
+                {teacherProfileData?.data?.teacher?.subject
+                  ? `${teacherProfileData.data.teacher.subject} Teacher`
+                  : (user as any)?.subject
+                  ? `${(user as any).subject} Teacher`
+                  : localSubject
+                  ? `${localSubject} Teacher`
+                  : 'Teacher'}
+              </Text>
+              {(teacherProfileData?.data?.teacher?.class || (user as any)?.class) && (
+                <Text style={styles.teacherClassBadge}>
+                  Class Teacher · Class{' '}
+                  {teacherProfileData?.data?.teacher?.class ?? (user as any)?.class}
+                  {' – '}Section{' '}
+                  {teacherProfileData?.data?.teacher?.section ?? (user as any)?.section}
+                </Text>
+              )}
             </View>
           </View>
           
@@ -296,40 +329,6 @@ const DashboardScreen = () => {
           )}
         </View>
 
-        {/* Recent Activity */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          {getRecentActivity().map((activity) => (
-            <View key={activity.id} style={styles.activityItem}>
-              <Text style={styles.activityIcon}>
-                {activity.type === 'task' ? '📝' : activity.type === 'event' ? '📅' : '💬'}
-              </Text>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityMessage}>{activity.message}</Text>
-                <Text style={styles.activityTime}>{activity.time}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.quickActionButton}>
-              <Text style={styles.quickActionIcon}>✅</Text>
-              <Text style={styles.quickActionText}>Take Attendance</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionButton}>
-              <Text style={styles.quickActionIcon}>📅</Text>
-              <Text style={styles.quickActionText}>View Calendar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionButton}>
-              <Text style={styles.quickActionIcon}>💬</Text>
-              <Text style={styles.quickActionText}>Chat</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       </ScrollView>
       
       <ProfileModal
@@ -412,6 +411,12 @@ const styles = StyleSheet.create({
   teacherRole: {
     fontSize: 14,
     color: '#B3D4FF',
+  },
+  teacherClassBadge: {
+    fontSize: 12,
+    color: '#B3D4FF',
+    marginTop: 2,
+    opacity: 0.85,
   },
   classSelector: {
     flexDirection: 'row',

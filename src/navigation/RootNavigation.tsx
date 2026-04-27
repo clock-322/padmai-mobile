@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -8,11 +8,13 @@ import HomePlaceholder from '../screens/HomePlaceholder';
 import ParentTabs from './ParentTabs';
 import TeacherTabs from './TeacherTabs';
 import AdminTabs from './AdminTabs';
+import SplashScreen from '../screens/SplashScreen';
 
 const RootNavigation = () => {
   const user = useSelector((state: RootState) => state.auth.user);
   const isHydrated = useSelector((state: RootState) => state.auth.isHydrated);
   const [currentScreen, setCurrentScreen] = useState<'login' | 'register'>('login');
+  const [splashDone, setSplashDone] = useState(false);
 
   // Reset to login screen when user logs out
   React.useEffect(() => {
@@ -21,12 +23,8 @@ const RootNavigation = () => {
     }
   }, [user]);
 
-  if (!isHydrated) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2F6FED" />
-      </View>
-    );
+  if (!isHydrated || !splashDone) {
+    return <SplashScreen onFinish={() => setSplashDone(true)} />;
   }
 
   // Show appropriate screen based on user role

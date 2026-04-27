@@ -13,8 +13,6 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../providers/DataProvider';
-import { useGetPaymentsByStudentIdMutation } from '../../store/services/paymentsApi';
-import { PaymentApiItem } from '../../types/payments';
 import { useGetStudentsByParentIdMutation } from '../../store/services/studentsApi';
 import { StudentApi } from '../../types/students';
 import ProfileIcon from '../../components/ProfileIcon';
@@ -30,22 +28,9 @@ interface QuickSummary {
     present: number;
     absent: number;
     percentage: number;
+    todayStatus: 'present' | 'absent' | null;
   };
   upcomingEvents: number;
-  payments: {
-    due: number;
-    amount: number;
-    status: 'Due' | 'Paid';
-  };
-}
-
-interface RecentActivity {
-  id: string;
-  type: 'message' | 'task' | 'payment' | 'attendance';
-  title: string;
-  description: string;
-  timestamp: string;
-  icon: string;
 }
 
 const HomeDashboard = () => {
@@ -53,11 +38,8 @@ const HomeDashboard = () => {
   const reduxUser = useSelector((state: RootState) => state.auth.user);
   const { students, events, attendance, isLoading: dataLoading } = useData();
   const [summary, setSummary] = useState<QuickSummary | null>(null);
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [apiPayments, setApiPayments] = useState<PaymentApiItem[]>([]);
-  const [fetchPayments, { isLoading: loadingPayments }] = useGetPaymentsByStudentIdMutation();
-  
+
   // Student management state
   const [apiStudents, setApiStudents] = useState<StudentApi[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -73,8 +55,10 @@ const HomeDashboard = () => {
       const currentUser = reduxUser || user;
       const childId = (currentUser as any)?.childId;
       const child = childId ? students.find(s => s.id === childId) : students.find(s => s.id === 's_1');
-      
+
       if (!child) {
+        // No local child data — that's fine, real students come from API
+        setSummary({ attendance: { present: 0, absent: 0, percentage: 0, todayStatus: null }, upcomingEvents: 0 });
         setLoading(false);
         return;
       }
@@ -95,90 +79,21 @@ const HomeDashboard = () => {
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         .slice(0, 3);
 
-      // Fetch payment data from API using studentId with timeout
-      // Use hardcoded STU001 as fallback similar to PaymentsScreen
-      const studentId = 'STU001';
-      
-      const paymentPromise = fetchPayments({ studentId }).unwrap();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Payment API timeout')), 3000)
-      );
-      
-      try {
-        const paymentsResponse = await Promise.race([paymentPromise, timeoutPromise]) as any;
-        const paymentsData = paymentsResponse.data?.payments || [];
-        setApiPayments(paymentsData);
-        
-        // Calculate payment summary from API data
-        const totalAmount = paymentsData.reduce((sum, p) => sum + (p.amount || 0), 0);
-        const paymentCount = paymentsData.length;
-        
-        setSummary({
-          attendance: { present, absent, percentage },
-          upcomingEvents: upcomingEvents.length,
-          payments: {
-            due: paymentCount,
-            amount: totalAmount,
-            status: paymentCount > 0 ? 'Due' : 'Paid'
-          }
-        });
-      } catch (error) {
-        console.error('Error fetching payments:', error);
-        // Fallback to default summary if API fails
-        setSummary({
-          attendance: { present, absent, percentage },
-          upcomingEvents: upcomingEvents.length,
-          payments: {
-            due: 0,
-            amount: 0,
-            status: 'Paid'
-          }
-        });
-      }
+      // Today's attendance
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayRecord = attendance.find(a => a.studentId === child.id && a.date === todayStr);
+      const todayStatus = (todayRecord?.status as 'present' | 'absent') ?? null;
 
-      // Generate recent activity
-      const activities: RecentActivity[] = [
-        {
-          id: '1',
-          type: 'message',
-          title: 'Message from Teacher',
-          description: 'Alex had a great day today!',
-          timestamp: '2 hours ago',
-          icon: '💬'
-        },
-        {
-          id: '2',
-          type: 'attendance',
-          title: 'Attendance Updated',
-          description: 'Present today',
-          timestamp: '1 day ago',
-          icon: '✅'
-        },
-        {
-          id: '3',
-          type: 'task',
-          title: 'New Assignment',
-          description: 'Math homework due tomorrow',
-          timestamp: '2 days ago',
-          icon: '📝'
-        },
-        {
-          id: '4',
-          type: 'payment',
-          title: 'Payment Reminder',
-          description: 'School fees due next week',
-          timestamp: '3 days ago',
-          icon: '💳'
-        }
-      ];
-
-      setRecentActivity(activities);
+      setSummary({
+        attendance: { present, absent, percentage, todayStatus },
+        upcomingEvents: upcomingEvents.length,
+      });
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  }, [reduxUser, user, students, attendance, events, fetchPayments]);
+  }, [reduxUser, user, students, attendance, events]);
 
   const loadStudents = useCallback(async () => {
     const currentUser = reduxUser || user;
@@ -201,10 +116,10 @@ const HomeDashboard = () => {
   }, [reduxUser, user, getStudentsByParentId]);
 
   useEffect(() => {
-    if (!dataLoading && students.length > 0) {
+    if (!dataLoading) {
       loadDashboardData();
     }
-  }, [dataLoading, students.length, loadDashboardData]);
+  }, [dataLoading, loadDashboardData]);
 
   useEffect(() => {
     const currentUser = reduxUser || user;
@@ -230,10 +145,6 @@ const HomeDashboard = () => {
         Alert.alert('Navigation', 'Opening Chat screen...');
         break;
     }
-  };
-
-  const handleViewPayments = () => {
-    Alert.alert('Navigation', 'Opening Payments screen...');
   };
 
   const handleAddStudentSuccess = () => {
@@ -269,13 +180,6 @@ const HomeDashboard = () => {
   const childId = (currentUser as any)?.childId;
   const child = childId ? students.find(s => s.id === childId) : students.find(s => s.id === 's_1');
 
-  const formatCurrency = (amount: number) => {
-    try {
-      return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
-    } catch {
-      return `₹${amount}`;
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -283,18 +187,18 @@ const HomeDashboard = () => {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Text style={styles.logo}>📚 Padmai</Text>
+            <Text style={styles.logo}>🏫 Kilbil School</Text>
             <View style={styles.headerRight}>
               <Text style={styles.welcomeText}>Welcome, {((currentUser as any)?.name || (currentUser as any)?.fullName || 'User')?.split(' ')[0]}!</Text>
               <ProfileIcon />
             </View>
           </View>
-          {child && (
+          {apiStudents.length > 0 && (
             <View style={styles.childInfo}>
               <Text style={styles.childAvatar}>👦</Text>
               <View style={styles.childDetails}>
-                <Text style={styles.childName}>{child.name}</Text>
-                <Text style={styles.childGrade}>Grade {child.grade}</Text>
+                <Text style={styles.childName}>{apiStudents[0].firstName} {apiStudents[0].lastName}</Text>
+                <Text style={styles.childGrade}>Class {apiStudents[0].class}{apiStudents[0].section ? `-${apiStudents[0].section}` : ''}</Text>
               </View>
             </View>
           )}
@@ -350,24 +254,18 @@ const HomeDashboard = () => {
             {/* Attendance Card */}
             <View style={styles.summaryCard}>
               <Text style={styles.cardIcon}>📊</Text>
-              <Text style={styles.cardTitle}>Attendance</Text>
-              <Text style={styles.cardValue}>
-                {summary?.attendance.present || 0} / {summary?.attendance.absent || 0}
-              </Text>
-              <Text style={styles.cardSubtext}>
-                {summary?.attendance.percentage || 0}% present
-              </Text>
-              <View style={styles.sparkline}>
-                {[1, 0, 1, 1, 0, 1, 1].map((dot, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.sparklineDot,
-                      { backgroundColor: dot ? '#28A745' : '#DC3545' }
-                    ]}
-                  />
-                ))}
+              <Text style={styles.cardTitle}>Today's Attendance</Text>
+              <View style={[
+                styles.statusBadge,
+                { backgroundColor: summary?.attendance.todayStatus === 'present' ? '#28A745' : summary?.attendance.todayStatus === 'absent' ? '#DC3545' : '#999' }
+              ]}>
+                <Text style={styles.statusText}>
+                  {summary?.attendance.todayStatus === 'present' ? 'Present' : summary?.attendance.todayStatus === 'absent' ? 'Absent' : 'No Record'}
+                </Text>
               </View>
+              <Text style={styles.cardSubtext}>
+                {summary?.attendance.percentage || 0}% this week
+              </Text>
             </View>
 
             {/* Events Card */}
@@ -377,40 +275,7 @@ const HomeDashboard = () => {
               <Text style={styles.cardValue}>{summary?.upcomingEvents || 0}</Text>
               <Text style={styles.cardSubtext}>Next 7 days</Text>
             </View>
-
-            {/* Payments Card */}
-            <View style={styles.summaryCard}>
-              <Text style={styles.cardIcon}>💳</Text>
-              <Text style={styles.cardTitle}>Payments</Text>
-              <Text style={styles.cardValue}>
-                {summary?.payments.amount ? formatCurrency(summary.payments.amount) : '₹0'}
-              </Text>
-              <View style={[
-                styles.statusBadge,
-                { backgroundColor: summary?.payments.status === 'Due' ? '#DC3545' : '#28A745' }
-              ]}>
-                <Text style={styles.statusText}>{summary?.payments.status || 'Paid'}</Text>
-              </View>
-              <TouchableOpacity style={styles.viewButton} onPress={handleViewPayments}>
-                <Text style={styles.viewButtonText}>View Payments</Text>
-              </TouchableOpacity>
-            </View>
           </ScrollView>
-        </View>
-
-        {/* Recent Activity */}
-        <View style={styles.activitySection}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          {recentActivity.map((activity) => (
-            <View key={activity.id} style={styles.activityItem}>
-              <Text style={styles.activityIcon}>{activity.icon}</Text>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>{activity.title}</Text>
-                <Text style={styles.activityDescription}>{activity.description}</Text>
-                <Text style={styles.activityTime}>{activity.timestamp}</Text>
-              </View>
-            </View>
-          ))}
         </View>
 
         {/* Quick Actions */}

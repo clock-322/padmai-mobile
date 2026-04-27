@@ -24,6 +24,7 @@ This is a demo-only authentication system for the Padmai School Management React
 - **Teacher**: `teacher@padmai.demo` / `Demo@123`
 - **School Owner**: `owner@padmai.demo` / `Demo@123`
 
+
 ## File Structure
 
 ```

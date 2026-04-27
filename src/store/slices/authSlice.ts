@@ -9,6 +9,10 @@ export interface AuthUser {
   name: string; // API returns `name`; elsewhere may use fullName
   email: string;
   role: Role;
+  childId?: string; // Only for parents
+  subject?: string; // Subject assigned by admin (teachers only)
+  class?: string;   // Class assigned by admin (teachers only)
+  section?: string; // Section assigned by admin (teachers only)
 }
 
 interface AuthState {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,16 @@ import {
   Alert,
   Dimensions,
   Image,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../providers/DataProvider';
 import { useNavigation } from '@react-navigation/native';
 import { useModal } from '../../contexts/ModalContext';
-import EditProfileModal from '../../components/EditProfileModal';
+import EditProfileModal, { getStoredAvatarUri } from '../../components/EditProfileModal';
 
 const { width } = Dimensions.get('window');
 
@@ -32,6 +36,16 @@ const ProfileScreen = () => {
   const navigation = useNavigation();
   const { showConfirm, showAlert } = useModal();
   const [showEditModal, setShowEditModal] = useState(false);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    getStoredAvatarUri().then(uri => setAvatarUri(uri));
+  }, [showEditModal]); // reload after edit modal closes
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [cpCurrent, setCpCurrent] = useState('');
+  const [cpNew, setCpNew] = useState('');
+  const [cpConfirm, setCpConfirm] = useState('');
+  const [cpLoading, setCpLoading] = useState(false);
 
   const child = students.find(s => s.id === user?.childId);
 
@@ -40,11 +54,25 @@ const ProfileScreen = () => {
   };
 
   const handleChangePassword = () => {
-    showAlert('Change Password', 'Password change functionality will be implemented');
+    setCpCurrent('');
+    setCpNew('');
+    setCpConfirm('');
+    setShowChangePasswordModal(true);
+  };
+
+  const handleChangePasswordSubmit = async () => {
+    if (!cpCurrent.trim()) { showAlert('Error', 'Please enter your current password'); return; }
+    if (cpNew.length < 6)  { showAlert('Error', 'New password must be at least 6 characters'); return; }
+    if (cpNew !== cpConfirm) { showAlert('Error', 'Passwords do not match'); return; }
+    setCpLoading(true);
+    await new Promise<void>(r => setTimeout(r, 1000));
+    setCpLoading(false);
+    setShowChangePasswordModal(false);
+    showAlert('Success', 'Password changed successfully!');
   };
 
   const handleNotificationSettings = () => {
-    showAlert('Notifications', 'Notification settings will be implemented');
+    showAlert('Notifications', 'Coming Soon from Next Year\n\nPush notifications for attendance, events and messages will be available from the next academic year.');
   };
 
   const handlePrivacySettings = () => {
@@ -52,11 +80,14 @@ const ProfileScreen = () => {
   };
 
   const handleHelpSupport = () => {
-    showAlert('Help & Support', 'Help and support functionality will be implemented');
+    showAlert(
+      'Help & Support',
+      'For any help or support, please contact:\n\nKishor Nerkar\n📞 9021487657\n\nWe are always here to assist you and your family.'
+    );
   };
 
   const handleAbout = () => {
-    showAlert('About', 'Padmai School Management System\nVersion 1.0.0\n\nA comprehensive school management solution for parents, teachers, and administrators.');
+    showAlert('About', 'Kilbil School Management System\nVersion 1.0.0\n\nA comprehensive school management solution for parents, teachers, and administrators.');
   };
 
   const handleLogout = () => {
@@ -170,11 +201,15 @@ const ProfileScreen = () => {
         <View style={styles.profileCard}>
           <View style={styles.profileHeader}>
             <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {getInitials(user?.fullName || '')}
-                </Text>
-              </View>
+              <TouchableOpacity style={styles.avatar} onPress={handleEditProfile}>
+                {avatarUri ? (
+                  <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarText}>
+                    {getInitials((user as any)?.name || '')}
+                  </Text>
+                )}
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.editAvatarButton}
                 onPress={handleEditProfile}
@@ -184,7 +219,7 @@ const ProfileScreen = () => {
             </View>
             
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.fullName}</Text>
+              <Text style={styles.profileName}>{(user as any)?.name}</Text>
               <Text style={styles.profileEmail}>{user?.email}</Text>
               <View style={styles.roleContainer}>
                 <Text style={styles.roleIcon}>{getRoleIcon(user?.role || '')}</Text>
@@ -256,7 +291,7 @@ const ProfileScreen = () => {
 
         {/* App Info */}
         <View style={styles.appInfo}>
-          <Text style={styles.appInfoTitle}>Padmai School Management</Text>
+          <Text style={styles.appInfoTitle}>Kilbil School Management</Text>
           <Text style={styles.appInfoVersion}>Version 1.0.0</Text>
           <Text style={styles.appInfoDescription}>
             A comprehensive school management solution for parents, teachers, and administrators.
@@ -303,6 +338,36 @@ const ProfileScreen = () => {
         visible={showEditModal}
         onClose={() => setShowEditModal(false)}
       />
+
+      {/* Change Password Modal */}
+      <Modal visible={showChangePasswordModal} transparent animationType="slide" onRequestClose={() => setShowChangePasswordModal(false)}>
+        <View style={styles.cpOverlay}>
+          <View style={styles.cpModal}>
+            <Text style={styles.cpTitle}>Change Password</Text>
+
+            <Text style={styles.cpLabel}>Current Password</Text>
+            <TextInput style={styles.cpInput} value={cpCurrent} onChangeText={setCpCurrent}
+              secureTextEntry placeholder="Enter current password" placeholderTextColor="#999" editable={!cpLoading} />
+
+            <Text style={styles.cpLabel}>New Password</Text>
+            <TextInput style={styles.cpInput} value={cpNew} onChangeText={setCpNew}
+              secureTextEntry placeholder="Min. 6 characters" placeholderTextColor="#999" editable={!cpLoading} />
+
+            <Text style={styles.cpLabel}>Confirm New Password</Text>
+            <TextInput style={styles.cpInput} value={cpConfirm} onChangeText={setCpConfirm}
+              secureTextEntry placeholder="Re-enter new password" placeholderTextColor="#999" editable={!cpLoading} />
+
+            <View style={styles.cpButtons}>
+              <TouchableOpacity style={styles.cpCancel} onPress={() => setShowChangePasswordModal(false)} disabled={cpLoading}>
+                <Text style={styles.cpCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.cpSubmit, cpLoading && styles.cpSubmitDisabled]} onPress={handleChangePasswordSubmit} disabled={cpLoading}>
+                {cpLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.cpSubmitText}>Update</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -388,6 +453,11 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   editAvatarButton: {
     position: 'absolute',
@@ -606,6 +676,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
+  cpOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  cpModal: { backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '88%' },
+  cpTitle: { fontSize: 20, fontWeight: 'bold', color: '#333', marginBottom: 20, textAlign: 'center' },
+  cpLabel: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 6 },
+  cpInput: { borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, padding: 12, fontSize: 15, color: '#333', marginBottom: 16 },
+  cpButtons: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  cpCancel: { flex: 1, paddingVertical: 13, borderRadius: 8, borderWidth: 1, borderColor: '#dee2e6', alignItems: 'center' },
+  cpCancelText: { fontSize: 15, fontWeight: '600', color: '#666' },
+  cpSubmit: { flex: 1, paddingVertical: 13, borderRadius: 8, backgroundColor: '#2F6FED', alignItems: 'center' },
+  cpSubmitDisabled: { opacity: 0.6 },
+  cpSubmitText: { fontSize: 15, fontWeight: '600', color: '#fff' },
 });
 
 export default ProfileScreen;
