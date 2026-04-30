@@ -17,6 +17,7 @@ import { RootState } from '../../store';
 import { useGetPaymentsByStudentIdMutation } from '../../store/services/paymentsApi';
 import { useGetStudentsByParentIdMutation } from '../../store/services/studentsApi';
 import { PaymentApiItem } from '../../types/payments';
+import { StudentApi } from '../../types/students';
 import ProfileIcon from '../../components/ProfileIcon';
 
 interface PaymentSummary {
@@ -28,6 +29,8 @@ const PaymentsScreen = () => {
   const user = useSelector((s: RootState) => s.auth.user as any);
   const [fetchPayments] = useGetPaymentsByStudentIdMutation();
   const [getStudentsByParentId] = useGetStudentsByParentIdMutation();
+  const [apiStudents, setApiStudents] = useState<StudentApi[]>([]);
+  const [selectedStudentIdx, setSelectedStudentIdx] = useState(0);
   const [userPayments, setUserPayments] = useState<PaymentApiItem[]>([]);
   const [summary, setSummary] = useState<PaymentSummary>({ totalAmount: 0, count: 0 });
   const [loading, setLoading] = useState(true);
@@ -35,14 +38,16 @@ const PaymentsScreen = () => {
 
   const loadPayments = useCallback(async () => {
     try {
-      // Step 1: get the real student ID for this parent
+      // Step 1: get students for this parent
       let studentId: string | null = null;
 
       if (user?.id) {
         try {
           const studentRes = await getStudentsByParentId({ parentId: user.id }).unwrap();
           if (studentRes.success && studentRes.data?.students?.length) {
-            studentId = studentRes.data.students[0].id;
+            setApiStudents(studentRes.data.students);
+            const selected = studentRes.data.students[selectedStudentIdx] || studentRes.data.students[0];
+            studentId = selected.id;
           }
         } catch {
           // fall through
@@ -68,7 +73,7 @@ const PaymentsScreen = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.id, fetchPayments, getStudentsByParentId]);
+  }, [user?.id, fetchPayments, getStudentsByParentId, selectedStudentIdx]);
 
   // Reload every time the tab is focused — catches new payment reminders from admin
   useFocusEffect(
@@ -144,6 +149,25 @@ const PaymentsScreen = () => {
           <ProfileIcon />
         </View>
       </View>
+
+      {/* Student Picker */}
+      {apiStudents.length >= 1 && (
+        <View style={styles.studentPicker}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.studentPickerContent}>
+            {apiStudents.map((s, idx) => (
+              <TouchableOpacity
+                key={s.id || (s as any)._id || `s-${idx}`}
+                style={[styles.studentChip, selectedStudentIdx === idx && styles.studentChipActive]}
+                onPress={() => setSelectedStudentIdx(idx)}
+              >
+                <Text style={[styles.studentChipText, selectedStudentIdx === idx && styles.studentChipTextActive]}>
+                  {s.firstName} {s.lastName}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> }>
         {/* Primary Action */}
@@ -259,6 +283,9 @@ const PaymentsScreen = () => {
             • Contact the school office for payment assistance
           </Text>
         </View>
+
+        {/* Spacing at bottom */}
+        <View style={{ height: 20 }} />
       </ScrollView>
 
       {/* Modal removed — read-only listing */}
@@ -616,6 +643,92 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  studentPicker: {
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  studentPickerContent: {
+    gap: 8,
+  },
+  studentChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  studentChipActive: {
+    backgroundColor: '#2F6FED',
+    borderColor: '#2F6FED',
+  },
+  studentChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#555',
+  },
+  studentChipTextActive: {
+    color: '#fff',
+  },
+  comingSoonSection: {
+    marginBottom: 24,
+  },
+  comingSoonSubtitle: {
+    fontSize: 14,
+    color: '#888',
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
+  comingSoonGrid: {
+    gap: 12,
+  },
+  comingSoonCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  comingSoonIcon: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  comingSoonContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  comingSoonTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+  },
+  comingSoonDesc: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  comingSoonBadge: {
+    backgroundColor: '#FFF3CD',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  comingSoonBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#856404',
   },
 });
 

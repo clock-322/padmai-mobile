@@ -38,16 +38,21 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
   if (!event) return null;
 
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString || 'Unknown date';
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } catch {
+      return dateString || 'Unknown date';
+    }
   };
 
   const getRoleBasedActions = () => {
@@ -93,7 +98,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
               <Text style={styles.detailLabel}>Type:</Text>
               <View style={[styles.typeBadge, { backgroundColor: getTypeColor(event.type) }]}>
                 <Text style={styles.typeBadgeText}>
-                  {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
+                  {event.type ? event.type.charAt(0).toUpperCase() + event.type.slice(1) : 'Event'}
                 </Text>
               </View>
             </View>
@@ -133,7 +138,25 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({
   );
 };
 
-const getTypeColor = (type: 'event' | 'task' | 'holiday') => {
+const safeParseDateKey = (dateString: string | undefined): string | null => {
+  if (!dateString) return null;
+  try {
+    // Extract date part directly from ISO string to avoid timezone shift
+    if (dateString.includes('T')) {
+      return dateString.split('T')[0];
+    }
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return null;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  } catch {
+    return null;
+  }
+};
+
+const getTypeColor = (type: string | undefined) => {
   switch (type) {
     case 'event':
       return '#2F6FED';
@@ -176,24 +199,30 @@ const CalendarScreen = () => {
   const loadEvents = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
       const allEvents = events || [];
-      
+
+      // Filter out events with invalid/missing dates first to prevent crashes
+      const validEvents = allEvents.filter(event => {
+        if (!event || !event.date) return false;
+        const d = new Date(event.date);
+        return !isNaN(d.getTime());
+      });
+
       // Apply role-based filtering
-      const filtered = allEvents.filter(event => {
+      const filtered = validEvents.filter(event => {
         switch (user?.role) {
           case 'parent':
-            return event.studentId === user.childId;
+            // Show events for this parent's child, plus school-wide events (holidays, etc.)
+            return event.studentId === user.childId || !event.studentId;
           case 'teacher':
-            // TODO: Add teacher.classes property to user data
-            return true; // For now, show all events
+            return true; // Show all events
           case 'schoolOwner':
             return true; // Show all events
           default:
             return false;
         }
       });
-      
+
       setFilteredEvents(filtered);
     } catch (error) {
       console.error('Error loading events:', error);
@@ -202,7 +231,8 @@ const CalendarScreen = () => {
     }
   };
 
-  const getUserName = (userId: string) => {
+  const getUserName = (userId: string | undefined) => {
+    if (!userId || !users || users.length === 0) return 'Unknown Teacher';
     const userData = users.find(u => u.id === userId);
     return userData ? userData.fullName : 'Unknown Teacher';
   };
@@ -264,12 +294,23 @@ const CalendarScreen = () => {
 
   const getEventsForSelectedDate = () => {
     if (!selectedDate) return [];
-    
-    const dateKey = selectedDate.toISOString().split('T')[0];
+
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(selectedDate.getDate()).padStart(2, '0');
+    const dateKey = `${year}-${month}-${day}`;
+    if (!dateKey) return [];
     return filteredEvents.filter(event => {
-      const eventDate = new Date(event.date);
-      return eventDate.toISOString().split('T')[0] === dateKey;
-    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const eventDateKey = safeParseDateKey(event.date);
+      return eventDateKey === dateKey;
+    }).sort((a, b) => {
+      const aTime = new Date(a.date).getTime();
+      const bTime = new Date(b.date).getTime();
+      // Handle NaN from invalid dates - push them to the end
+      if (isNaN(aTime)) return 1;
+      if (isNaN(bTime)) return -1;
+      return aTime - bTime;
+    });
   };
 
   const formatMonthYear = (date: Date) => {

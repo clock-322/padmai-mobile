@@ -212,7 +212,7 @@ const AttendanceReportScreen = () => {
               {new Date(reportData.dateRange.start).toLocaleDateString()} - {new Date(reportData.dateRange.end).toLocaleDateString()}
             </Text>
             {reportData.studentStats.map((student: any) => (
-              <View key={student.id} style={styles.studentCard}>
+              <View key={student._id || student.id} style={styles.studentCard}>
                 <View style={styles.studentInfo}>
                   <View style={styles.studentAvatar}>
                     <Text style={styles.studentAvatarText}>

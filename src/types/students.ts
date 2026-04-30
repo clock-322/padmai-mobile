@@ -9,6 +9,8 @@ export interface AddStudentPayload {
   fatherName?: string;
   motherName?: string;
   division?: string;
+  gender?: 'male' | 'female';
+  idNumber?: string;
 }
 
 export interface AddStudentResponse {
@@ -21,6 +23,7 @@ export interface AddStudentResponse {
 
 export interface StudentApi {
   id: string;
+  _id?: string;
   parentId: string;
   firstName: string;
   lastName: string;
@@ -28,6 +31,8 @@ export interface StudentApi {
   section: string;
   registrationNo: string;
   classRollNo: string;
+  gender?: 'male' | 'female';
+  idNumber?: string;
   createdAt?: string;
   updatedAt?: string;
   attendanceStatus?: 'present' | 'absent' | null;
@@ -46,6 +51,10 @@ export interface StudentFormData {
   class: string;
   division: string;
   classRollNo: string;
+  gender: 'male' | 'female' | '';
+  idNumber: string;
+  section?: string;
+  registrationNo?: string;
 }
 
 export interface GetStudentsResponse {

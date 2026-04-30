@@ -73,7 +73,7 @@ const ChatThreadScreen: React.FC<ChatThreadScreenProps> = ({ route, navigation }
       const newMessage: Message = {
         id: `msg_${Date.now()}`,
         senderId: user.id,
-        senderName: user.fullName,
+        senderName: user.name || 'Me',
         content: message.trim(),
         timestamp: new Date().toISOString(),
         type: 'message',

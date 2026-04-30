@@ -5,11 +5,11 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   TextInput,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
@@ -327,6 +327,32 @@ const DashboardScreen = () => {
               </View>
             </>
           )}
+        </View>
+
+        {/* Coming Soon Section */}
+        <View style={styles.comingSoonSection}>
+          <Text style={styles.sectionTitle}>Upcoming Features</Text>
+          <Text style={styles.comingSoonSubtitle}>Coming soon from next Academic Year</Text>
+          <View style={styles.comingSoonGrid}>
+            {[
+              { icon: '📝', title: 'Behaviour & Incident Reporting', desc: 'Report and track student behaviour, incidents, and disciplinary actions' },
+              { icon: '📂', title: 'File Sharing for Study Material', desc: 'Share PDFs, documents, and study materials directly with students and parents' },
+              { icon: '🔔', title: 'Push Notifications', desc: 'Remind students/parents about homework, assignments, projects and activities' },
+              { icon: '📍', title: 'Live Tracking of Students', desc: 'Live location of students or current location for safety during school hours' },
+              { icon: '🤖', title: 'AI Teacher & Video Guidance', desc: 'AI-powered teaching assistant with video-based guidance for better learning' },
+            ].map((item, idx) => (
+              <View key={idx} style={styles.comingSoonCard}>
+                <Text style={styles.comingSoonIcon}>{item.icon}</Text>
+                <View style={styles.comingSoonContent}>
+                  <Text style={styles.comingSoonTitle}>{item.title}</Text>
+                  <Text style={styles.comingSoonDesc}>{item.desc}</Text>
+                </View>
+                <View style={styles.comingSoonBadge}>
+                  <Text style={styles.comingSoonBadgeText}>Coming Soon</Text>
+                </View>
+              </View>
+            ))}
+          </View>
         </View>
 
       </ScrollView>
@@ -776,6 +802,64 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '600',
     textAlign: 'center',
+  },
+  comingSoonSection: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  comingSoonSubtitle: {
+    fontSize: 14,
+    color: '#888',
+    marginBottom: 12,
+    marginTop: -8,
+    fontStyle: 'italic',
+  },
+  comingSoonGrid: {
+    gap: 12,
+  },
+  comingSoonCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  comingSoonIcon: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  comingSoonContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  comingSoonTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+  },
+  comingSoonDesc: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  comingSoonBadge: {
+    backgroundColor: '#FFF3CD',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  comingSoonBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#856404',
   },
 });
 

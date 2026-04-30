@@ -6,13 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
-import { useData } from '../../providers/DataProvider';
 import { useGetStudentsByParentIdMutation } from '../../store/services/studentsApi';
 import { StudentApi } from '../../types/students';
 import ProfileIcon from '../../components/ProfileIcon';
@@ -23,23 +21,9 @@ import WelcomeCard from '../../components/WelcomeCard';
 import WelcomeCarouselModal from '../../components/WelcomeCarouselModal';
 import { trackWelcomeCardImpression } from '../../utils/analytics';
 
-interface QuickSummary {
-  attendance: {
-    present: number;
-    absent: number;
-    percentage: number;
-    todayStatus: 'present' | 'absent' | null;
-  };
-  upcomingEvents: number;
-}
-
 const HomeDashboard = () => {
   const { user } = useAuth();
   const reduxUser = useSelector((state: RootState) => state.auth.user);
-  const { students, events, attendance, isLoading: dataLoading } = useData();
-  const [summary, setSummary] = useState<QuickSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-
   // Student management state
   const [apiStudents, setApiStudents] = useState<StudentApi[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -48,52 +32,6 @@ const HomeDashboard = () => {
   const [selectedStudent, setSelectedStudent] = useState<StudentApi | null>(null);
   const [getStudentsByParentId] = useGetStudentsByParentIdMutation();
   const [isCarouselVisible, setIsCarouselVisible] = useState(false);
-
-  const loadDashboardData = useCallback(async () => {
-    try {
-      // Find child data - use childId from user or fallback to static student
-      const currentUser = reduxUser || user;
-      const childId = (currentUser as any)?.childId;
-      const child = childId ? students.find(s => s.id === childId) : students.find(s => s.id === 's_1');
-
-      if (!child) {
-        // No local child data — that's fine, real students come from API
-        setSummary({ attendance: { present: 0, absent: 0, percentage: 0, todayStatus: null }, upcomingEvents: 0 });
-        setLoading(false);
-        return;
-      }
-
-      // Calculate attendance summary (last 7 days)
-      const last7Days = attendance.filter(a => 
-        a.studentId === child.id && 
-        new Date(a.date) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      );
-      
-      const present = last7Days.filter(a => a.status === 'present').length;
-      const absent = last7Days.filter(a => a.status === 'absent').length;
-      const percentage = last7Days.length > 0 ? Math.round((present / last7Days.length) * 100) : 0;
-
-      // Get upcoming events (next 3)
-      const upcomingEvents = events
-        .filter(e => new Date(e.date) >= new Date())
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(0, 3);
-
-      // Today's attendance
-      const todayStr = new Date().toISOString().split('T')[0];
-      const todayRecord = attendance.find(a => a.studentId === child.id && a.date === todayStr);
-      const todayStatus = (todayRecord?.status as 'present' | 'absent') ?? null;
-
-      setSummary({
-        attendance: { present, absent, percentage, todayStatus },
-        upcomingEvents: upcomingEvents.length,
-      });
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [reduxUser, user, students, attendance, events]);
 
   const loadStudents = useCallback(async () => {
     const currentUser = reduxUser || user;
@@ -116,12 +54,6 @@ const HomeDashboard = () => {
   }, [reduxUser, user, getStudentsByParentId]);
 
   useEffect(() => {
-    if (!dataLoading) {
-      loadDashboardData();
-    }
-  }, [dataLoading, loadDashboardData]);
-
-  useEffect(() => {
     const currentUser = reduxUser || user;
     if (currentUser?.id) {
       loadStudents();
@@ -129,23 +61,6 @@ const HomeDashboard = () => {
     trackWelcomeCardImpression('parent');
   }, [reduxUser, user, loadStudents]);
 
-
-  const handleQuickAction = (action: string) => {
-    switch (action) {
-      case 'attendance':
-        Alert.alert('Navigation', 'Opening Attendance screen...');
-        break;
-      case 'calendar':
-        Alert.alert('Navigation', 'Opening Calendar screen...');
-        break;
-      case 'payment':
-        Alert.alert('Navigation', 'Opening Payments screen...');
-        break;
-      case 'message':
-        Alert.alert('Navigation', 'Opening Chat screen...');
-        break;
-    }
-  };
 
   const handleAddStudentSuccess = () => {
     loadStudents();
@@ -167,19 +82,7 @@ const HomeDashboard = () => {
     setSelectedStudent(null);
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2F6FED" />
-        <Text style={styles.loadingText}>Loading dashboard...</Text>
-      </View>
-    );
-  }
-
   const currentUser = reduxUser || user;
-  const childId = (currentUser as any)?.childId;
-  const child = childId ? students.find(s => s.id === childId) : students.find(s => s.id === 's_1');
-
 
   return (
     <SafeAreaView style={styles.container}>
@@ -228,9 +131,9 @@ const HomeDashboard = () => {
             </View>
           ) : apiStudents.length > 0 ? (
             <View style={styles.studentsList}>
-              {apiStudents.map((student) => (
+              {apiStudents.map((student, index) => (
                 <StudentCard
-                  key={student.id}
+                  key={student.id || (student as any)._id || `student-${index}`}
                   student={student}
                   onPress={() => handleStudentCardPress(student)}
                 />
@@ -247,80 +150,59 @@ const HomeDashboard = () => {
           )}
         </View>
 
-        {/* Quick Summary Cards */}
-        <View style={styles.summarySection}>
-          <Text style={styles.sectionTitle}>Quick Summary</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.summaryCards}>
-            {/* Attendance Card */}
-            <View style={styles.summaryCard}>
-              <Text style={styles.cardIcon}>📊</Text>
-              <Text style={styles.cardTitle}>Today's Attendance</Text>
-              <View style={[
-                styles.statusBadge,
-                { backgroundColor: summary?.attendance.todayStatus === 'present' ? '#28A745' : summary?.attendance.todayStatus === 'absent' ? '#DC3545' : '#999' }
-              ]}>
-                <Text style={styles.statusText}>
-                  {summary?.attendance.todayStatus === 'present' ? 'Present' : summary?.attendance.todayStatus === 'absent' ? 'Absent' : 'No Record'}
-                </Text>
+        <View style={{ height: 8 }} />
+
+        {/* Benefits Section */}
+        <View style={styles.comingSoonSection}>
+          <Text style={styles.sectionTitle}>Benefits</Text>
+          <View style={styles.comingSoonGrid}>
+            {[
+              { icon: '🏅', title: 'Sport Events', desc: 'Sports competitions and events for students' },
+              { icon: '🧠', title: 'IQ Challenges', desc: 'Brain teasers and IQ challenges for students' },
+              { icon: '🪪', title: 'Digital ID Card', desc: 'Digital ID card with live tracking or one time location' },
+              { icon: '🎓', title: 'Scholarship', desc: 'Scholarship from 1st to 10th for rank holders' },
+              { icon: '🏥', title: 'Medical Camp', desc: 'Regular medical camps for student health checkups' },
+              { icon: '🛡️', title: 'Health Cover / Insurance', desc: 'Health cover and insurance for students' },
+              { icon: '🎥', title: 'Webinar for Students', desc: "Webinar to understand your children's growth for their bright future" },
+              { icon: '👨‍👩‍👧', title: 'Webinar for Parents', desc: "Webinar for parents to understand their children's growth and development" },
+            ].map((item, idx) => (
+              <View key={idx} style={styles.comingSoonCard}>
+                <Text style={styles.comingSoonIcon}>{item.icon}</Text>
+                <View style={styles.comingSoonContent}>
+                  <Text style={styles.comingSoonTitle}>{item.title}</Text>
+                  <Text style={styles.comingSoonDesc}>{item.desc}</Text>
+                </View>
               </View>
-              <Text style={styles.cardSubtext}>
-                {summary?.attendance.percentage || 0}% this week
-              </Text>
-            </View>
-
-            {/* Events Card */}
-            <View style={styles.summaryCard}>
-              <Text style={styles.cardIcon}>📅</Text>
-              <Text style={styles.cardTitle}>Upcoming Events</Text>
-              <Text style={styles.cardValue}>{summary?.upcomingEvents || 0}</Text>
-              <Text style={styles.cardSubtext}>Next 7 days</Text>
-            </View>
-          </ScrollView>
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.quickActionsSection}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsGrid}>
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={() => handleQuickAction('attendance')}
-            >
-              <Text style={styles.quickActionIcon}>📊</Text>
-              <Text style={styles.quickActionText}>View Attendance</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={() => handleQuickAction('calendar')}
-            >
-              <Text style={styles.quickActionIcon}>📅</Text>
-              <Text style={styles.quickActionText}>Open Calendar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={() => handleQuickAction('payment')}
-            >
-              <Text style={styles.quickActionIcon}>💳</Text>
-              <Text style={styles.quickActionText}>Mark Payment</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={() => handleQuickAction('message')}
-            >
-              <Text style={styles.quickActionIcon}>💬</Text>
-              <Text style={styles.quickActionText}>Message Teacher</Text>
-            </TouchableOpacity>
+            ))}
           </View>
         </View>
 
-        {/* Footer Info */}
-        <View style={styles.footerInfo}>
-          <Text style={styles.footerText}>
-            💡 Payments are processed via school portal
-          </Text>
-          <Text style={styles.footerSubtext}>
-            Updated 2 days ago
-          </Text>
+        {/* About Features Section */}
+        <View style={styles.comingSoonSection}>
+          <Text style={styles.sectionTitle}>About Features</Text>
+          <View style={styles.comingSoonGrid}>
+            {[
+              { icon: '✅', title: 'Daily Attendance & Live Location Tracking', desc: 'Track daily attendance and live location of students' },
+              { icon: '📅', title: 'Calendar with Reminders', desc: 'Calendar with event reminder and task reminder' },
+              { icon: '📊', title: 'Progress Report', desc: 'Progress report of every month, unit test and term examination' },
+              { icon: '💳', title: 'Payment System', desc: 'Records, balance, dues - parents can pay from app and set autopay monthly' },
+              { icon: '📋', title: 'PTA Scheduler', desc: 'Parents and teachers can select a suitable meeting day' },
+              { icon: '📍', title: 'Live Tracking & Location', desc: 'Live location of students for safety' },
+              { icon: '🤖', title: 'AI Teacher & Videos', desc: 'Students can ask questions to AI and get video-based guidance for better learning' },
+              { icon: '📢', title: 'News & Announcement Feed', desc: 'Stay updated with school news, announcements and important updates in one place' },
+              { icon: '🧩', title: 'IQ & Mystery Games', desc: 'Students can play games and win reward points to get school accessories' },
+              { icon: '📚', title: 'Study Material', desc: 'Teachers will send PDF, documents and study material directly to students' },
+              { icon: '🎁', title: 'Reward Points', desc: 'Students redeem reward points and get school accessories according to their needs' },
+            ].map((item, idx) => (
+              <View key={idx} style={styles.comingSoonCard}>
+                <Text style={styles.comingSoonIcon}>{item.icon}</Text>
+                <View style={styles.comingSoonContent}>
+                  <Text style={styles.comingSoonTitle}>{item.title}</Text>
+                  <Text style={styles.comingSoonDesc}>{item.desc}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
         </View>
       </ScrollView>
 
@@ -349,17 +231,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
   },
   content: {
     flex: 1,
@@ -415,174 +286,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#B3D4FF',
   },
-  summarySection: {
-    padding: 20,
-  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: '#333',
     marginBottom: 16,
-  },
-  summaryCards: {
-    flexDirection: 'row',
-  },
-  summaryCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginRight: 12,
-    width: 160,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  cardValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2F6FED',
-    marginBottom: 4,
-  },
-  cardSubtext: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
-  },
-  sparkline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sparklineDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    marginRight: 2,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  viewButton: {
-    backgroundColor: '#2F6FED',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  viewButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  activitySection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  activityIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  activityDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  activityTime: {
-    fontSize: 12,
-    color: '#999',
-  },
-  quickActionsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  quickActionButton: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    width: '48%',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-    minHeight: 48,
-    justifyContent: 'center',
-  },
-  quickActionIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  quickActionText: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  footerInfo: {
-    backgroundColor: '#fff',
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  footerSubtext: {
-    fontSize: 12,
-    color: '#999',
   },
   studentsSection: {
     padding: 20,
@@ -642,6 +350,63 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+  },
+  comingSoonSection: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  comingSoonSubtitle: {
+    fontSize: 14,
+    color: '#888',
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
+  comingSoonGrid: {
+    gap: 12,
+  },
+  comingSoonCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  comingSoonIcon: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  comingSoonContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  comingSoonTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+  },
+  comingSoonDesc: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  comingSoonBadge: {
+    backgroundColor: '#FFF3CD',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  comingSoonBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#856404',
   },
 });
 

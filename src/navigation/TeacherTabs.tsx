@@ -10,6 +10,7 @@ import CalendarScreen from '../screens/teacher/CalendarScreen';
 import TeacherChatDirectory from '../screens/teacher/TeacherChatDirectory';
 import ChatThreadScreen from '../screens/chat/ChatThreadScreen';
 import ProgressScreen from '../screens/teacher/ProgressScreen';
+import ComingSoonScreen from '../screens/common/ComingSoonScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -140,6 +141,15 @@ const TeacherTabs = () => (
       options={{
         tabBarLabel: 'Chat',
         tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>💬</Text>,
+      }}
+    />
+    <Tab.Screen
+      name="TeacherMoreTab"
+      component={ComingSoonScreen}
+      initialParams={{ role: 'teacher' }}
+      options={{
+        tabBarLabel: 'More',
+        tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🚀</Text>,
       }}
     />
   </Tab.Navigator>

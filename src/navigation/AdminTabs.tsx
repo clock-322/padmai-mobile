@@ -9,6 +9,7 @@ import AcademicEventsScreen from '../screens/admin/AcademicEventsScreen';
 import ProfileModal from '../screens/admin/ProfileModal';
 import StudentListScreen from '../screens/admin/StudentListScreen';
 import TeacherListScreen from '../screens/admin/TeacherListScreen';
+import ComingSoonScreen from '../screens/common/ComingSoonScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -142,6 +143,15 @@ const AdminTabs = () => (
       options={{
         tabBarLabel: 'Events',
         tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>📅</Text>,
+      }}
+    />
+    <Tab.Screen
+      name="AdminMoreTab"
+      component={ComingSoonScreen}
+      initialParams={{ role: 'admin' }}
+      options={{
+        tabBarLabel: 'More',
+        tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🚀</Text>,
       }}
     />
   </Tab.Navigator>

@@ -19,6 +19,7 @@ import { useData } from '../../providers/DataProvider';
 import { useNavigation } from '@react-navigation/native';
 import { useModal } from '../../contexts/ModalContext';
 import EditProfileModal, { getStoredAvatarUri } from '../../components/EditProfileModal';
+import { useGetStudentsByParentIdMutation } from '../../store/services/studentsApi';
 
 const { width } = Dimensions.get('window');
 
@@ -32,15 +33,49 @@ interface ProfileMenuItem {
 
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
-  const { students } = useData();
+  const { students, events } = useData();
   const navigation = useNavigation();
   const { showConfirm, showAlert } = useModal();
   const [showEditModal, setShowEditModal] = useState(false);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [getStudentsByParentId] = useGetStudentsByParentIdMutation();
+  const [attendancePct, setAttendancePct] = useState<string>('--');
+  const [eventCount, setEventCount] = useState<number>(0);
 
   useEffect(() => {
     getStoredAvatarUri().then(uri => setAvatarUri(uri));
   }, [showEditModal]); // reload after edit modal closes
+
+  // Load real attendance stats from API
+  useEffect(() => {
+    const loadStats = async () => {
+      if (!user?.id) return;
+      try {
+        const res = await getStudentsByParentId({ parentId: user.id }).unwrap();
+        if (res.success && res.data?.students?.length) {
+          // Calculate attendance across all students
+          let totalPresent = 0;
+          let totalRecords = 0;
+          res.data.students.forEach((s: any) => {
+            const history = s.attendanceHistory || [];
+            history.forEach((h: any) => {
+              totalRecords++;
+              if (h.status === 'present') totalPresent++;
+            });
+          });
+          if (totalRecords > 0) {
+            setAttendancePct(`${Math.round((totalPresent / totalRecords) * 100)}%`);
+          } else {
+            setAttendancePct('0%');
+          }
+        }
+      } catch {}
+      // Count upcoming events
+      const upcoming = events.filter(e => new Date(e.date) >= new Date()).length;
+      setEventCount(upcoming);
+    };
+    loadStats();
+  }, [user?.id, getStudentsByParentId, events]);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [cpCurrent, setCpCurrent] = useState('');
   const [cpNew, setCpNew] = useState('');
@@ -248,15 +283,15 @@ const ProfileScreen = () => {
         {/* Quick Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>95%</Text>
+            <Text style={styles.statNumber}>{attendancePct}</Text>
             <Text style={styles.statLabel}>Attendance</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>3</Text>
+            <Text style={styles.statNumber}>{eventCount}</Text>
             <Text style={styles.statLabel}>Events</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>2</Text>
+            <Text style={styles.statNumber}>--</Text>
             <Text style={styles.statLabel}>Messages</Text>
           </View>
         </View>

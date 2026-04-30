@@ -161,15 +161,15 @@ const styles = StyleSheet.create({
   },
   glowRing: {
     position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
     backgroundColor: 'rgba(255,255,255,0.15)',
   },
   logoCircle: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     backgroundColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   logoEmoji: {
-    fontSize: 72,
+    fontSize: 96,
   },
   title: {
     fontSize: 42,

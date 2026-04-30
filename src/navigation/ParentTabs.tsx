@@ -7,7 +7,9 @@ import AttendanceScreen from '../screens/parent/AttendanceScreen';
 import CalendarScreen from '../screens/common/CalendarScreen';
 import PaymentsScreen from '../screens/parent/PaymentsScreen';
 import ChatScreen from '../screens/parent/ChatScreen';
+import ParentProgressScreen from '../screens/parent/ProgressScreen';
 import ProfileScreen from '../screens/parent/ProfileScreen';
+import ComingSoonScreen from '../screens/common/ComingSoonScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -74,6 +76,16 @@ const MainTabs = () => {
         }}
       />
       <Tab.Screen
+        name="Progress"
+        component={ParentProgressScreen}
+        options={{
+          tabBarLabel: 'Progress',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 20, color }}>📈</Text>
+          ),
+        }}
+      />
+      <Tab.Screen
         name="Payments"
         component={PaymentsScreen}
         options={{
@@ -84,12 +96,13 @@ const MainTabs = () => {
         }}
       />
       <Tab.Screen
-        name="Chat"
-        component={ChatScreen}
+        name="More"
+        component={ComingSoonScreen}
+        initialParams={{ role: 'parent' }}
         options={{
-          tabBarLabel: 'Chat',
+          tabBarLabel: 'More',
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>💬</Text>
+            <Text style={{ fontSize: 20, color }}>🚀</Text>
           ),
         }}
       />

@@ -36,12 +36,14 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ visible, onClose, onS
     class: '',
     division: '',
     classRollNo: '',
+    gender: '' as 'male' | 'female' | '',
+    idNumber: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (visible) {
-      setFormData({ firstName: '', lastName: '', fatherName: '', motherName: '', class: '', division: '', classRollNo: '' });
+      setFormData({ firstName: '', lastName: '', fatherName: '', motherName: '', class: '', division: '', classRollNo: '', gender: '', idNumber: '' });
       setErrors({});
     }
   }, [visible]);
@@ -55,6 +57,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ visible, onClose, onS
     if (!formData.class.trim())      e.class      = 'Class is required';
     if (!formData.division)          e.division   = 'Division is required';
     if (!formData.classRollNo.trim()) e.classRollNo = 'Roll number is required';
+    if (!formData.gender)            e.gender     = 'Gender is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -71,6 +74,8 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ visible, onClose, onS
         section: formData.division,          // map division → section for API
         registrationNo: `${formData.class}${formData.division}${formData.classRollNo}`,
         classRollNo: formData.classRollNo,
+        gender: formData.gender as 'male' | 'female',
+        idNumber: formData.idNumber || undefined,
       }).unwrap();
       if (result.success) {
         showToast('Student added successfully!', 'success');
@@ -140,6 +145,26 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ visible, onClose, onS
                 {errors.motherName ? <Text style={styles.error}>{errors.motherName}</Text> : null}
               </View>
 
+              {/* Gender */}
+              <View style={styles.field}>
+                <Text style={styles.label}>Gender *</Text>
+                <View style={styles.divisionRow}>
+                  {(['male', 'female'] as const).map(g => (
+                    <TouchableOpacity
+                      key={g}
+                      style={[styles.divisionBtn, formData.gender === g && styles.divisionBtnActive]}
+                      onPress={() => update('gender', g)}
+                      disabled={isLoading}
+                    >
+                      <Text style={[styles.divisionBtnText, formData.gender === g && styles.divisionBtnTextActive]}>
+                        {g === 'male' ? '👦 Male' : '👧 Female'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {errors.gender ? <Text style={styles.error}>{errors.gender}</Text> : null}
+              </View>
+
               {/* Class */}
               <View style={styles.field}>
                 <Text style={styles.label}>Class *</Text>
@@ -178,6 +203,14 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ visible, onClose, onS
                   placeholder="e.g., 15" placeholderTextColor="#999"
                   keyboardType="numeric" editable={!isLoading} />
                 {errors.classRollNo ? <Text style={styles.error}>{errors.classRollNo}</Text> : null}
+              </View>
+
+              {/* Student ID Number */}
+              <View style={styles.field}>
+                <Text style={styles.label}>Student ID Number</Text>
+                <TextInput style={styles.input}
+                  value={formData.idNumber} onChangeText={v => update('idNumber', v)}
+                  placeholder="Enter student ID (optional)" placeholderTextColor="#999" editable={!isLoading} />
               </View>
 
               <View style={styles.infoBox}>

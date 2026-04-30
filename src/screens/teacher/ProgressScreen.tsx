@@ -18,16 +18,29 @@ import { useGetClassStudentsMutation } from '../../store/services/studentsApi';
 import { ClassStudentApi } from '../../types/students';
 import TeacherHeaderRight from '../../components/teacher/TeacherHeaderRight';
 import ProfileModal from './ProfileModal';
-import { SubjectProgress } from '../../store/services/progressApi';
+import { SubjectProgress, useSaveProgressMutation } from '../../store/services/progressApi';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
+// Academic year months (June to April)
+const ACADEMIC_MONTHS = [5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3]; // June=5 to April=3
+
+type ReportType = 'monthly' | 'unit_test_1' | 'unit_test_2' | 'term_exam_1' | 'term_exam_2';
+
+const REPORT_TYPES: { key: ReportType; label: string }[] = [
+  { key: 'monthly', label: 'Monthly' },
+  { key: 'unit_test_1', label: 'Unit Test 1' },
+  { key: 'unit_test_2', label: 'Unit Test 2' },
+  { key: 'term_exam_1', label: 'Term Exam 1' },
+  { key: 'term_exam_2', label: 'Term Exam 2' },
+];
+
 const DEFAULT_SUBJECTS = [
   'Mathematics', 'Science', 'English', 'Social Studies',
-  'Hindi', 'Computer', 'Art', 'Physical Education',
+  'Hindi', 'Marathi', 'Computer', 'Art', 'Physical Education',
 ];
 
 const computeGrade = (obtained: number, total: number): string => {
@@ -72,11 +85,15 @@ const saveLocalProgress = async (key: string, data: any) => {
 const ProgressScreen = () => {
   const { user } = useAuth();
   const [getClassStudents] = useGetClassStudentsMutation();
+  const [saveProgressApi] = useSaveProgressMutation();
 
   const today = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
+  // Default to current month if in academic year (June-April), otherwise default to June
+  const initialMonth = ACADEMIC_MONTHS.includes(today.getMonth()) ? today.getMonth() : 5;
+  const [selectedMonth, setSelectedMonth] = useState(initialMonth);
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
   const [monthPickerVisible, setMonthPickerVisible] = useState(false);
+  const [selectedReportType, setSelectedReportType] = useState<ReportType>('monthly');
 
   const [students, setStudents] = useState<ClassStudentApi[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
@@ -92,7 +109,9 @@ const ProgressScreen = () => {
 
   const [profileModalVisible, setProfileModalVisible] = useState(false);
 
-  const storageKey = `progress_${user?.id}_${selectedYear}_${selectedMonth}`;
+  const storageKey = selectedReportType === 'monthly'
+    ? `progress_${user?.id}_${selectedYear}_${selectedMonth}`
+    : `progress_${user?.id}_${selectedYear}_${selectedReportType}`;
 
   useEffect(() => {
     fetchStudents();
@@ -100,7 +119,7 @@ const ProgressScreen = () => {
 
   useEffect(() => {
     loadProgressForMonth();
-  }, [selectedMonth, selectedYear, students]);
+  }, [selectedMonth, selectedYear, selectedReportType, students]);
 
   const fetchStudents = async () => {
     if (!user?.id) { setLoadingStudents(false); return; }
@@ -192,6 +211,21 @@ const ProgressScreen = () => {
     const updated = { ...progressMap, [editingStudent._id]: editingSubjects };
     setProgressMap(updated);
     await saveLocalProgress(storageKey, updated);
+
+    // Also save to backend API so parents can see the progress
+    try {
+      await saveProgressApi({
+        teacherId: user?.id || '',
+        studentId: editingStudent._id,
+        month: selectedReportType === 'monthly' ? selectedMonth : -1,
+        year: selectedYear,
+        subjects: editingSubjects,
+        ...(selectedReportType !== 'monthly' ? { reportType: selectedReportType } : {}),
+      } as any).unwrap();
+    } catch (err) {
+      console.warn('Failed to sync progress to server (saved locally):', err);
+    }
+
     setSaving(false);
     setEditModalVisible(false);
     Alert.alert('Saved', `Progress for ${editingStudent.firstName} ${editingStudent.lastName} has been saved.`);
@@ -241,19 +275,38 @@ const ProgressScreen = () => {
         )}
       </View>
 
-      {/* Month Selector */}
-      <View style={styles.monthSelector}>
-        <Text style={styles.monthSelectorLabel}>Reporting Month:</Text>
-        <TouchableOpacity
-          style={styles.monthButton}
-          onPress={() => setMonthPickerVisible(true)}
-        >
-          <Text style={styles.monthButtonText}>
-            {MONTHS[selectedMonth]} {selectedYear}
-          </Text>
-          <Text style={styles.monthButtonArrow}>▼</Text>
-        </TouchableOpacity>
+      {/* Report Type Selector */}
+      <View style={styles.reportTypeSelector}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.reportTypeContent}>
+          {REPORT_TYPES.map((rt) => (
+            <TouchableOpacity
+              key={rt.key}
+              style={[styles.reportTypeChip, selectedReportType === rt.key && styles.reportTypeChipActive]}
+              onPress={() => setSelectedReportType(rt.key)}
+            >
+              <Text style={[styles.reportTypeChipText, selectedReportType === rt.key && styles.reportTypeChipTextActive]}>
+                {rt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
+
+      {/* Month Selector - only show for monthly type */}
+      {selectedReportType === 'monthly' && (
+        <View style={styles.monthSelector}>
+          <Text style={styles.monthSelectorLabel}>Reporting Month:</Text>
+          <TouchableOpacity
+            style={styles.monthButton}
+            onPress={() => setMonthPickerVisible(true)}
+          >
+            <Text style={styles.monthButtonText}>
+              {MONTHS[selectedMonth]} {selectedYear}
+            </Text>
+            <Text style={styles.monthButtonArrow}>▼</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Students List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -268,7 +321,9 @@ const ProgressScreen = () => {
         ) : (
           <View style={styles.listContainer}>
             <Text style={styles.listTitle}>
-              Student Progress – {MONTHS[selectedMonth]} {selectedYear}
+              Student Progress – {selectedReportType === 'monthly'
+                ? `${MONTHS[selectedMonth]} ${selectedYear}`
+                : `${REPORT_TYPES.find(r => r.key === selectedReportType)?.label} ${selectedYear}`}
             </Text>
             {students.map((student) => {
               const summary = getStudentSummary(student._id);
@@ -342,19 +397,19 @@ const ProgressScreen = () => {
                 </TouchableOpacity>
               ))}
             </View>
-            {/* Month grid */}
+            {/* Month grid - Academic year: June to April */}
             <View style={styles.monthGrid}>
-              {MONTHS.map((m, i) => (
+              {ACADEMIC_MONTHS.map((monthIdx) => (
                 <TouchableOpacity
-                  key={m}
-                  style={[styles.monthCell, selectedMonth === i && styles.monthCellActive]}
+                  key={monthIdx}
+                  style={[styles.monthCell, selectedMonth === monthIdx && styles.monthCellActive]}
                   onPress={() => {
-                    setSelectedMonth(i);
+                    setSelectedMonth(monthIdx);
                     setMonthPickerVisible(false);
                   }}
                 >
-                  <Text style={[styles.monthCellText, selectedMonth === i && styles.monthCellTextActive]}>
-                    {m.slice(0, 3)}
+                  <Text style={[styles.monthCellText, selectedMonth === monthIdx && styles.monthCellTextActive]}>
+                    {MONTHS[monthIdx].slice(0, 3)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -381,7 +436,9 @@ const ProgressScreen = () => {
                   {editingStudent?.firstName} {editingStudent?.lastName}
                 </Text>
                 <Text style={styles.editSubtitle}>
-                  {MONTHS[selectedMonth]} {selectedYear} · Progress Report
+                  {selectedReportType === 'monthly'
+                    ? `${MONTHS[selectedMonth]} ${selectedYear}`
+                    : `${REPORT_TYPES.find(r => r.key === selectedReportType)?.label} ${selectedYear}`} · Progress Report
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setEditModalVisible(false)}>
@@ -498,6 +555,36 @@ const styles = StyleSheet.create({
   welcomeText: { fontSize: 16, fontWeight: '600', color: '#B3D4FF' },
   classSubtitle: { fontSize: 13, color: '#B3D4FF', marginTop: 2 },
 
+  reportTypeSelector: {
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  reportTypeContent: {
+    gap: 8,
+  },
+  reportTypeChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  reportTypeChipActive: {
+    backgroundColor: '#2F6FED',
+    borderColor: '#2F6FED',
+  },
+  reportTypeChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#555',
+  },
+  reportTypeChipTextActive: {
+    color: '#fff',
+  },
   monthSelector: {
     flexDirection: 'row',
     alignItems: 'center',

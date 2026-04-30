@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
-    baseUrl: 'https://padmai-ft.vercel.app/api',
+    baseUrl: 'https://padmaibackend.vercel.app/api',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',

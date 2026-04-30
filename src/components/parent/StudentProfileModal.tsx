@@ -39,10 +39,15 @@ const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
   const [formData, setFormData] = useState<StudentFormData>({
     firstName: '',
     lastName: '',
+    fatherName: '',
+    motherName: '',
     class: '',
+    division: '',
+    classRollNo: '',
+    gender: '',
+    idNumber: '',
     section: '',
     registrationNo: '',
-    classRollNo: '',
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof StudentFormData, string>>>({});
@@ -52,10 +57,15 @@ const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
       setFormData({
         firstName: student.firstName,
         lastName: student.lastName,
+        fatherName: '',
+        motherName: '',
         class: student.class,
+        division: '',
+        classRollNo: student.classRollNo,
+        gender: student.gender || '',
+        idNumber: student.idNumber || '',
         section: student.section,
         registrationNo: student.registrationNo,
-        classRollNo: student.classRollNo,
       });
       setIsEditMode(false);
       setErrors({});
@@ -107,7 +117,17 @@ const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
       const result = await updateStudent({
         studentId: student.id,
         parentId: user.id,
-        ...formData,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        class: formData.class,
+        classRollNo: formData.classRollNo,
+        ...(formData.section && { section: formData.section }),
+        ...(formData.registrationNo && { registrationNo: formData.registrationNo }),
+        ...(formData.fatherName && { fatherName: formData.fatherName }),
+        ...(formData.motherName && { motherName: formData.motherName }),
+        ...(formData.division && { division: formData.division }),
+        ...(formData.gender && { gender: formData.gender as 'male' | 'female' }),
+        ...(formData.idNumber && { idNumber: formData.idNumber }),
       }).unwrap();
 
       if (result.success) {
@@ -170,10 +190,15 @@ const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
           setFormData({
             firstName: student.firstName,
             lastName: student.lastName,
+            fatherName: '',
+            motherName: '',
             class: student.class,
+            division: '',
+            classRollNo: student.classRollNo,
+            gender: student.gender || '',
+            idNumber: student.idNumber || '',
             section: student.section,
             registrationNo: student.registrationNo,
-            classRollNo: student.classRollNo,
           });
         }
       } else {
@@ -308,18 +333,55 @@ const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
                       <Text style={styles.errorText}>{errors.classRollNo}</Text>
                     )}
                   </View>
+
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.label}>Gender</Text>
+                    <View style={styles.genderRow}>
+                      {(['male', 'female'] as const).map(g => (
+                        <TouchableOpacity
+                          key={g}
+                          style={[styles.genderBtn, formData.gender === g && styles.genderBtnActive]}
+                          onPress={() => updateField('gender', g)}
+                          disabled={isLoading}
+                        >
+                          <Text style={[styles.genderBtnText, formData.gender === g && styles.genderBtnTextActive]}>
+                            {g === 'male' ? '👦 Male' : '👧 Female'}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.label}>Student ID Number</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.idNumber}
+                      onChangeText={(text) => updateField('idNumber', text)}
+                      placeholder="Enter student ID (optional)"
+                      placeholderTextColor="#999"
+                      editable={!isLoading}
+                    />
+                  </View>
                 </>
               ) : (
                 // View Mode - Display
                 <>
                   <View style={styles.avatarContainer}>
-                    <Text style={styles.avatar}>👦</Text>
+                    <Text style={styles.avatar}>{student.gender === 'female' ? '👧' : '👦'}</Text>
                   </View>
 
                   <View style={styles.infoSection}>
                     <View style={styles.infoRow}>
                       <Text style={styles.infoLabel}>Full Name</Text>
                       <Text style={styles.infoValue}>{fullName}</Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Gender</Text>
+                      <Text style={styles.infoValue}>
+                        {student.gender ? (student.gender === 'male' ? '👦 Male' : '👧 Female') : 'Not specified'}
+                      </Text>
                     </View>
 
                     <View style={styles.infoRow}>
@@ -341,6 +403,13 @@ const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
                       <Text style={styles.infoLabel}>Class Roll Number</Text>
                       <Text style={styles.infoValue}>{student.classRollNo}</Text>
                     </View>
+
+                    {student.idNumber ? (
+                      <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Student ID Number</Text>
+                        <Text style={styles.infoValue}>{student.idNumber}</Text>
+                      </View>
+                    ) : null}
                   </View>
                 </>
               )}
@@ -551,6 +620,30 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  genderRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  genderBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#dee2e6',
+    alignItems: 'center',
+  },
+  genderBtnActive: {
+    backgroundColor: '#2F6FED',
+    borderColor: '#2F6FED',
+  },
+  genderBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#495057',
+  },
+  genderBtnTextActive: {
+    color: '#fff',
   },
 });
 

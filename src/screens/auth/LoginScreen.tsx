@@ -19,9 +19,9 @@ interface LoginScreenProps {
 }
 
 const DEMO_CREDENTIALS = {
-  parent:      { email: 'parent@padmai.demo',  password: 'Demo@123' },
-  teacher:     { email: 'teacher@padmai.demo', password: 'Demo@123' },
-  schoolOwner: { email: 'owner@padmai.demo',   password: 'Demo@123' },
+  parent:      { email: 'parent@kilbil.demo',  password: 'Demo@123' },
+  teacher:     { email: 'teacher@kilbil.demo', password: 'Demo@123' },
+  schoolOwner: { email: 'owner@kilbil.demo',   password: 'Demo@123' },
 };
 
 const LoginScreen = ({ onNavigateToRegister }: LoginScreenProps) => {

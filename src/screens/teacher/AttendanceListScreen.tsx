@@ -230,7 +230,7 @@ const AttendanceListScreen = () => {
         <View style={styles.studentList}>
           <Text style={styles.listTitle}>Students ({classData.students.length})</Text>
           {classData.students.map((student) => (
-            <View key={student.id} style={styles.studentItem}>
+            <View key={(student as any)._id || student.id} style={styles.studentItem}>
               <View style={styles.studentInfo}>
                 <View style={styles.studentAvatar}>
                   <Text style={styles.studentAvatarText}>

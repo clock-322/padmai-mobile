@@ -29,11 +29,11 @@ export const speakers: Speaker[] = [
     image: require('../assets/images/sanjay.jpg'),
   },
   {
-    id: 'kishor',
-    name: 'Kishor Nerkar',
-    role: 'App Support',
-    message: 'For any help or support, please contact us directly. We are always here to assist you and your family.',
-    image: require('../assets/images/sanjay.jpg'),
+    id: 'raheel',
+    name: 'Raheel Saudagar',
+    role: 'IBM (University of London - International Business Management Strategy & Leadership)',
+    message: 'We welcome you to our school application. Will make your child to next step for their bright future.',
+    image: require('../assets/images/raheel.jpg'),
   },
 ];
 

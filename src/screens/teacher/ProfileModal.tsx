@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import EditProfileModal from '../../components/EditProfileModal';
 import { useGetTeacherByIdQuery } from '../../store/services/teachersApi';
+import { useGetClassStudentsMutation } from '../../store/services/studentsApi';
 
 interface ProfileModalProps {
   visible: boolean;
@@ -20,12 +21,40 @@ interface ProfileModalProps {
 const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) => {
   const { user, logout } = useAuth();
   const [showEditModal, setShowEditModal] = useState(false);
+  const [classInfo, setClassInfo] = useState<{ class?: string; section?: string } | null>(null);
 
   const { data: teacherProfileData, isLoading: isLoadingProfile } = useGetTeacherByIdQuery(
     (user as any)?.id ?? '',
     { skip: !(user as any)?.id }
   );
   const teacherProfile = teacherProfileData?.data?.teacher;
+
+  const [getClassStudents] = useGetClassStudentsMutation();
+
+  // Fetch class info from class-students endpoint as a fallback
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      try {
+        const res = await getClassStudents({ teacherId: user.id }).unwrap() as any;
+        if (res.success && res.data) {
+          setClassInfo({ class: res.data.class, section: res.data.section });
+        }
+      } catch {}
+    })();
+  }, [user?.id]);
+
+  // Derive assigned class from API response, class-students endpoint, OR auth user state
+  const tp = teacherProfile as any;
+  const assignedClass = tp?.class ?? tp?.assignedClass
+    ?? classInfo?.class
+    ?? (user as any)?.class ?? (user as any)?.assignedClass ?? null;
+  const assignedSection = tp?.section ?? tp?.assignedSection
+    ?? classInfo?.section
+    ?? (user as any)?.section ?? (user as any)?.assignedSection ?? null;
+  const assignedSubject = tp?.subject ?? tp?.assignedSubject
+    ?? (user as any)?.subject ?? (user as any)?.assignedSubject ?? null;
+  const assignedRole = tp?.role ?? (user as any)?.teacherRole ?? null;
 
   const handleLogout = () => {
     try {
@@ -76,32 +105,35 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) => {
                 <View style={styles.classItem}>
                   <Text style={styles.className}>Loading...</Text>
                 </View>
-              ) : teacherProfile?.class && teacherProfile?.section ? (
+              ) : assignedClass || assignedSubject ? (
                 <>
-                  <View style={styles.assignmentRow}>
-                    <Text style={styles.assignmentLabel}>Class</Text>
-                    <Text style={styles.assignmentValue}>
-                      Class {teacherProfile.class} – Section {teacherProfile.section}
-                    </Text>
-                  </View>
-                  {teacherProfile?.subject ? (
+                  {assignedClass ? (
+                    <View style={styles.assignmentRow}>
+                      <Text style={styles.assignmentLabel}>Class</Text>
+                      <Text style={styles.assignmentValue}>
+                        Class {assignedClass}{assignedSection ? ` – Section ${assignedSection}` : ''}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {assignedSubject ? (
                     <View style={styles.assignmentRow}>
                       <Text style={styles.assignmentLabel}>Subject</Text>
-                      <Text style={styles.assignmentValue}>{teacherProfile.subject}</Text>
+                      <Text style={styles.assignmentValue}>{assignedSubject}</Text>
                     </View>
                   ) : null}
                   <View style={styles.assignmentRow}>
                     <Text style={styles.assignmentLabel}>Role</Text>
                     <Text style={styles.assignmentValue}>
-                      {teacherProfile?.subject
-                        ? `${teacherProfile.subject} Teacher`
-                        : 'Class Teacher'}
+                      {assignedRole ? assignedRole :
+                        assignedSubject
+                          ? `Class Teacher - ${assignedSubject} Teacher`
+                          : 'Class Teacher'}
                     </Text>
                   </View>
                 </>
               ) : (
                 <View style={styles.classItem}>
-                  <Text style={styles.className}>No class assigned yet</Text>
+                  <Text style={styles.className}>No Assignment available yet</Text>
                   <Text style={styles.studentCount}>Contact admin to get assigned</Text>
                 </View>
               )}

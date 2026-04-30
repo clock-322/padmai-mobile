@@ -177,7 +177,7 @@ const RegisterScreen = ({ onNavigateToLogin }: RegisterScreenProps) => {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Role *</Text>
             <View style={styles.roleContainer}>
-              {(['parent', 'teacher', 'schoolOwner'] as const).map((roleOption) => (
+              {(['parent', 'teacher'] as const).map((roleOption) => (
                 <TouchableOpacity
                   key={roleOption}
                   style={[
@@ -197,8 +197,7 @@ const RegisterScreen = ({ onNavigateToLogin }: RegisterScreenProps) => {
                       role === roleOption && styles.roleButtonTextSelected,
                     ]}
                   >
-                    {roleOption === 'parent' ? 'Parent' :
-                     roleOption === 'teacher' ? 'Teacher' : 'School Owner'}
+                    {roleOption === 'parent' ? 'Parent' : 'Teacher'}
                   </Text>
                 </TouchableOpacity>
               ))}

@@ -1,1 +1,130 @@
-[]
+[
+  {
+    "id": "mh_holiday_1",
+    "title": "Republic Day",
+    "date": "2026-01-26T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "National Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_2",
+    "title": "Chhatrapati Shivaji Maharaj Jayanti",
+    "date": "2026-02-19T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "Maharashtra State Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_3",
+    "title": "Holi",
+    "date": "2026-03-17T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "National Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_4",
+    "title": "Gudi Padwa",
+    "date": "2026-03-29T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "Maharashtra New Year",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_5",
+    "title": "Dr. Babasaheb Ambedkar Jayanti",
+    "date": "2026-04-14T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "National Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_6",
+    "title": "Maharashtra Day",
+    "date": "2026-05-01T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "Maharashtra State Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_7",
+    "title": "Independence Day",
+    "date": "2026-08-15T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "National Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_8",
+    "title": "Ganesh Chaturthi",
+    "date": "2026-08-22T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "Maharashtra Festival Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_9",
+    "title": "Anant Chaturdashi (Ganpati Visarjan)",
+    "date": "2026-09-01T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "Maharashtra Festival Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_10",
+    "title": "Mahatma Gandhi Jayanti",
+    "date": "2026-10-02T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "National Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_11",
+    "title": "Dussehra (Vijayadashami)",
+    "date": "2026-10-02T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "National Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_12",
+    "title": "Diwali (Lakshmi Puja)",
+    "date": "2026-10-21T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "National Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_13",
+    "title": "Diwali (Padwa / Govardhan Puja)",
+    "date": "2026-10-22T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "National Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_14",
+    "title": "Bhai Dooj",
+    "date": "2026-10-23T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "National Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_15",
+    "title": "Guru Nanak Jayanti",
+    "date": "2026-11-08T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "National Holiday",
+    "createdBy": "system"
+  },
+  {
+    "id": "mh_holiday_16",
+    "title": "Christmas",
+    "date": "2026-12-25T00:00:00.000Z",
+    "type": "holiday",
+    "notes": "National Holiday",
+    "createdBy": "system"
+  }
+]

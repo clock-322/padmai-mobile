@@ -8,6 +8,7 @@ import {
   TouchableWithoutFeedback,
   FlatList,
   Image,
+  ImageBackground,
   Dimensions,
   Platform,
   Keyboard,
@@ -122,12 +123,28 @@ const WelcomeCarouselModal: React.FC<WelcomeCarouselModalProps> = ({
       >
         <View style={styles.slideContent}>
           <View style={styles.imageContainer}>
-            <Image
-              source={item.image}
-              style={styles.image}
-              resizeMode="contain"
-              accessibilityLabel={`Photo of ${item.name}`}
-            />
+            {item.id === 'raheel' ? (
+              <ImageBackground
+                source={item.image}
+                style={styles.blurBackground}
+                resizeMode="cover"
+                blurRadius={15}
+              >
+                <Image
+                  source={item.image}
+                  style={styles.image}
+                  resizeMode="contain"
+                  accessibilityLabel={`Photo of ${item.name}`}
+                />
+              </ImageBackground>
+            ) : (
+              <Image
+                source={item.image}
+                style={styles.image}
+                resizeMode="contain"
+                accessibilityLabel={`Photo of ${item.name}`}
+              />
+            )}
           </View>
           <View style={styles.textContainer}>
             <Text style={styles.name}>{item.name}</Text>
@@ -327,6 +344,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#f5f5f5',
     alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  blurBackground: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },

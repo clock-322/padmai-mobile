@@ -47,11 +47,57 @@ export interface SaveProgressResponse {
   };
 }
 
+export interface GetStudentProgressResponse {
+  success: boolean;
+  message: string;
+  data: Array<{
+    month: string;
+    year: number;
+    subjects: Array<{
+      name: string;
+      marks: number;
+      total: number;
+    }>;
+  }>;
+}
+
+export interface GetAllProgressResponse {
+  success: boolean;
+  message: string;
+  data: Array<{
+    studentId: string;
+    teacherId?: string;
+    month: number;
+    year: number;
+    subjects: Array<{
+      subject: string;
+      marksObtained: number | null;
+      totalMarks: number;
+      grade: string;
+      remarks: string;
+    }>;
+  }>;
+}
+
 export const progressApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getProgress: builder.query<GetProgressResponse, GetProgressPayload>({
       query: ({ teacherId, month, year }) => ({
         url: `/progress?teacherId=${teacherId}&month=${month}&year=${year}`,
+        method: 'GET',
+      }),
+      providesTags: ['Progress'],
+    }),
+    getAllProgress: builder.query<GetAllProgressResponse, void>({
+      query: () => ({
+        url: '/progress',
+        method: 'GET',
+      }),
+      providesTags: ['Progress'],
+    }),
+    getStudentProgress: builder.query<GetStudentProgressResponse, { studentId: string }>({
+      query: ({ studentId }) => ({
+        url: `/progress/student?studentId=${studentId}`,
         method: 'GET',
       }),
       providesTags: ['Progress'],
@@ -67,4 +113,4 @@ export const progressApi = baseApi.injectEndpoints({
   }),
 });
 
-export const { useGetProgressQuery, useSaveProgressMutation } = progressApi;
+export const { useGetProgressQuery, useGetAllProgressQuery, useGetStudentProgressQuery, useSaveProgressMutation } = progressApi;

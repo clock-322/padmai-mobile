@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { RootState } from '../../store';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../providers/DataProvider';
 import { useGetStudentsByParentIdMutation } from '../../store/services/studentsApi';
+import { StudentApi } from '../../types/students';
 import ProfileIcon from '../../components/ProfileIcon';
 
 interface AttendanceRecord {
@@ -83,6 +84,8 @@ const AttendanceScreen = () => {
   const reduxUser = useSelector((state: RootState) => state.auth.user);
   const { students, attendance } = useData();
   const [getStudentsByParentId] = useGetStudentsByParentIdMutation();
+  const [apiStudents, setApiStudents] = useState<StudentApi[]>([]);
+  const [selectedStudentIdx, setSelectedStudentIdx] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [monthlyAttendance, setMonthlyAttendance] = useState<AttendanceRecord[]>([]);
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats>({
@@ -92,6 +95,20 @@ const AttendanceScreen = () => {
     percentage: 0,
   });
   const [loading, setLoading] = useState(true);
+
+  // Load students list once
+  const loadStudentsList = useCallback(async () => {
+    const currentUser = reduxUser || user;
+    if (!currentUser?.id) return;
+    try {
+      const res = await getStudentsByParentId({ parentId: currentUser.id }).unwrap();
+      if (res.success && res.data?.students?.length) {
+        setApiStudents(res.data.students);
+      }
+    } catch {}
+  }, [reduxUser, user, getStudentsByParentId]);
+
+  useEffect(() => { loadStudentsList(); }, [loadStudentsList]);
 
   const loadAttendanceData = useCallback(async () => {
     try {
@@ -104,14 +121,17 @@ const AttendanceScreen = () => {
         try {
           const res = await getStudentsByParentId({ parentId: currentUser.id }).unwrap();
           if (res.success && res.data?.students?.length) {
-            const apiStudent = res.data.students[0]; // first linked student
+            setApiStudents(res.data.students);
+            const apiStudent = res.data.students[selectedStudentIdx] || res.data.students[0];
             const history = apiStudent.attendanceHistory || [];
-            apiRecords = history.map((h, idx) => ({
-              id: `api_${idx}`,
-              studentId: apiStudent.id,
-              date: h.date.slice(0, 10), // normalize to YYYY-MM-DD
-              status: (h.status as 'present' | 'absent' | 'late') || 'present',
-            }));
+            apiRecords = history
+              .filter(h => h && h.date) // skip entries with missing date
+              .map((h, idx) => ({
+                id: `api_${idx}`,
+                studentId: apiStudent.id,
+                date: h.date.slice(0, 10), // normalize to YYYY-MM-DD
+                status: (h.status as 'present' | 'absent' | 'late') || 'present',
+              }));
             // Use local date (not UTC) to avoid timezone off-by-one in IST
             const now = new Date();
             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -143,12 +163,11 @@ const AttendanceScreen = () => {
         }
       }
 
-      // Filter to current month
-      const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+      // Filter to current month using string comparison to avoid timezone issues
+      const yearMonth = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
       const filtered = records.filter(r => {
-        const d = new Date(r.date);
-        return d >= startOfMonth && d <= endOfMonth;
+        // r.date is already normalized to YYYY-MM-DD
+        return r.date.startsWith(yearMonth);
       });
 
       setMonthlyAttendance(filtered);
@@ -164,7 +183,7 @@ const AttendanceScreen = () => {
     } finally {
       setLoading(false);
     }
-  }, [reduxUser, user, students, attendance, currentMonth, getStudentsByParentId]);
+  }, [reduxUser, user, students, attendance, currentMonth, getStudentsByParentId, selectedStudentIdx]);
 
   // Reload every time the screen is focused (catches teacher attendance updates)
   useFocusEffect(
@@ -229,7 +248,9 @@ const AttendanceScreen = () => {
       const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const attendanceRecord = monthlyAttendance.find(a => a.date === dateStr);
       const holiday = getHolidayName(dateStr);
-      const dow = new Date(dateStr).getDay();
+      // Use local date constructor to avoid UTC timezone shift
+      const [yr, mn, dy] = dateStr.split('-').map(Number);
+      const dow = new Date(yr, mn - 1, dy).getDay();
       const isWeekend = dow === 0 || dow === 6;
       const weekendLabel = dow === 0 ? 'Sunday' : 'Saturday';
       days.push({
@@ -252,7 +273,7 @@ const AttendanceScreen = () => {
     );
   }
 
-  const child = students.find(s => s.id === user?.childId);
+  const selectedStudent = apiStudents[selectedStudentIdx] || null;
   const calendarDays = generateCalendarDays();
 
   return (
@@ -262,12 +283,31 @@ const AttendanceScreen = () => {
           <View style={styles.headerLeft}>
             <Text style={styles.headerTitle}>📊 Attendance</Text>
             <Text style={styles.headerSubtitle}>
-              {child?.name} - {formatMonthYear(currentMonth)}
+              {selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : ''} - {formatMonthYear(currentMonth)}
             </Text>
           </View>
           <ProfileIcon />
         </View>
       </View>
+
+      {/* Student Picker */}
+      {apiStudents.length >= 1 && (
+        <View style={styles.studentPicker}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.studentPickerContent}>
+            {apiStudents.map((s, idx) => (
+              <TouchableOpacity
+                key={s.id || (s as any)._id || `s-${idx}`}
+                style={[styles.studentChip, selectedStudentIdx === idx && styles.studentChipActive]}
+                onPress={() => setSelectedStudentIdx(idx)}
+              >
+                <Text style={[styles.studentChipText, selectedStudentIdx === idx && styles.studentChipTextActive]}>
+                  {s.firstName} {s.lastName}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Monthly Stats */}
@@ -638,6 +678,36 @@ const styles = StyleSheet.create({
     color: '#666',
     fontStyle: 'italic',
     marginTop: 4,
+  },
+  studentPicker: {
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  studentPickerContent: {
+    gap: 8,
+  },
+  studentChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  studentChipActive: {
+    backgroundColor: '#2F6FED',
+    borderColor: '#2F6FED',
+  },
+  studentChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#555',
+  },
+  studentChipTextActive: {
+    color: '#fff',
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,119 +7,272 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../providers/DataProvider';
+import { useGetAllStudentsQuery, useGetTeachersQuery } from '../../store/services/teachersApi';
+import { useGetClassAttendanceMutation } from '../../store/services/attendanceApi';
+import { useGetAllProgressQuery } from '../../store/services/progressApi';
 import AdminHeaderRight from '../../components/admin/AdminHeaderRight';
 import StatCard from '../../components/admin/StatCard';
 
+interface StudentStat {
+  id: string;
+  name: string;
+  className: string;
+  classId: string;
+  present: number;
+  total: number;
+  percentage: number;
+  attendanceStatus?: string | null;
+  mathGrade?: number;
+  englishGrade?: number;
+  scienceGrade?: number;
+  averageGrade?: number;
+  allSubjects?: { name: string; pct: number }[];
+}
+
 const StatisticsScreen = () => {
   const { user } = useAuth();
-  const { students, attendance, events } = useData();
+  const { students: localStudents, attendance: localAttendance } = useData();
+
+  // API data
+  const { data: apiStudentsData, refetch: refetchStudents } = useGetAllStudentsQuery();
+  const { data: apiTeachersData, refetch: refetchTeachers } = useGetTeachersQuery();
+  const { data: allProgressData, refetch: refetchProgress } = useGetAllProgressQuery();
+  const [getClassAttendance] = useGetClassAttendanceMutation();
+
   const [activeTab, setActiveTab] = useState<'attendance' | 'progress'>('attendance');
   const [selectedClass, setSelectedClass] = useState('all');
   const [dateRange, setDateRange] = useState('week');
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
-  const [progressData, setProgressData] = useState<any[]>([]);
+  const [attendanceData, setAttendanceData] = useState<StudentStat[]>([]);
+  const [progressData, setProgressData] = useState<StudentStat[]>([]);
+  const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(true);
 
+  // Refetch API data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      mountedRef.current = true;
+      refetchStudents();
+      refetchTeachers();
+      refetchProgress();
+      return () => { mountedRef.current = false; };
+    }, [refetchStudents, refetchTeachers, refetchProgress])
+  );
+
+  // Merge API students with local students; API takes priority
+  const allStudents = React.useMemo(() => {
+    const apiStudents = apiStudentsData?.success ? (apiStudentsData.data?.students || []) : [];
+    if (apiStudents.length > 0) {
+      return apiStudents.map(s => ({
+        id: s._id,
+        name: `${s.firstName} ${s.lastName}`.trim(),
+        classId: `class_${s.class}`,
+        className: `Class ${s.class}${s.section ? ' ' + s.section : ''}`,
+        classNum: s.class,
+        section: s.section,
+        rollNo: s.classRollNo,
+      }));
+    }
+    // Fallback to local static data
+    return localStudents.map(s => ({
+      id: s.id,
+      name: s.name,
+      classId: s.classId,
+      className: s.classId?.replace('class_', 'Class ') || 'Unknown',
+      classNum: s.classId?.replace('class_', '') || '0',
+      section: '',
+      rollNo: '',
+    }));
+  }, [apiStudentsData, localStudents]);
+
+  // Build class options from actual student data
+  const getClassOptions = useCallback(() => {
+    const classSet = new Map<string, string>();
+    allStudents.forEach(s => {
+      if (!classSet.has(s.classId)) {
+        classSet.set(s.classId, s.className.split(' ').slice(0, 2).join(' ')); // "Class 5"
+      }
+    });
+    const sorted = Array.from(classSet.entries())
+      .sort((a, b) => {
+        const aNum = parseInt(a[0].replace(/\D/g, ''), 10) || 0;
+        const bNum = parseInt(b[0].replace(/\D/g, ''), 10) || 0;
+        return aNum - bNum;
+      })
+      .map(([id, name]) => ({ id, name }));
+    return [{ id: 'all', name: 'All Classes' }, ...sorted];
+  }, [allStudents]);
+
+  // Get all teachers with assigned classes
+  const assignedTeachers = React.useMemo(() => {
+    if (!apiTeachersData?.success) return [];
+    return (apiTeachersData.data?.teachers || []).filter(t => t.class && t.class !== '');
+  }, [apiTeachersData]);
+
+  // Load attendance data from API
   useEffect(() => {
     loadAttendanceData();
+  }, [selectedClass, dateRange, allStudents, assignedTeachers]);
+
+  useEffect(() => {
     loadProgressData();
-  }, [selectedClass, dateRange, students, attendance]);
+  }, [selectedClass, allStudents, allProgressData]);
 
-  const loadAttendanceData = () => {
-    const endDate = new Date();
-    const startDate = new Date();
-    
-    switch (dateRange) {
-      case 'week':
-        startDate.setDate(endDate.getDate() - 7);
-        break;
-      case 'month':
-        startDate.setMonth(endDate.getMonth() - 1);
-        break;
-      case 'term':
-        startDate.setMonth(endDate.getMonth() - 3);
-        break;
+  const loadAttendanceData = async () => {
+    setLoading(true);
+    try {
+      // Determine the date to fetch attendance for (today)
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+      // Fetch attendance from each teacher's class
+      const attendanceMap = new Map<string, { status: string | null }>();
+
+      if (assignedTeachers.length > 0) {
+        const fetchPromises = assignedTeachers.map(async (teacher) => {
+          try {
+            const res = await getClassAttendance({
+              teacherId: teacher._id,
+              date: todayStr,
+            }).unwrap();
+            if (res.success && res.data?.students) {
+              res.data.students.forEach(s => {
+                attendanceMap.set(s.id, { status: s.attendanceStatus });
+              });
+            }
+          } catch {
+            // Skip teachers whose API call fails
+          }
+        });
+        await Promise.all(fetchPromises);
+      }
+
+      // Filter students by selected class
+      let filtered = allStudents;
+      if (selectedClass !== 'all') {
+        filtered = allStudents.filter(s => s.classId === selectedClass);
+      }
+
+      // Build student stats using API attendance data
+      const studentStats: StudentStat[] = filtered.map(student => {
+        const attendanceRecord = attendanceMap.get(student.id);
+        const hasAttendance = attendanceRecord && attendanceRecord.status !== null;
+        const isPresent = attendanceRecord?.status === 'present';
+        const isAbsent = attendanceRecord?.status === 'absent';
+
+        // For today's snapshot, percentage is based on whether marked present
+        // If attendance is marked, present=100%, absent=0%
+        // If not marked yet, show as not yet marked (0 of 0)
+        const present = isPresent ? 1 : 0;
+        const total = hasAttendance ? 1 : 0;
+        const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+
+        return {
+          id: student.id,
+          name: student.name,
+          className: student.className,
+          classId: student.classId,
+          present,
+          total,
+          percentage,
+          attendanceStatus: attendanceRecord?.status || null,
+        };
+      });
+
+      // Sort by class then by name
+      studentStats.sort((a, b) => {
+        const aNum = parseInt(a.classId.replace(/\D/g, ''), 10) || 0;
+        const bNum = parseInt(b.classId.replace(/\D/g, ''), 10) || 0;
+        if (aNum !== bNum) return aNum - bNum;
+        return a.name.localeCompare(b.name);
+      });
+
+      if (mountedRef.current) {
+        setAttendanceData(studentStats);
+      }
+    } catch (error) {
+      console.error('Error loading attendance data:', error);
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
-
-    let filteredStudents = students;
-    if (selectedClass !== 'all') {
-      filteredStudents = students.filter(s => s.classId === selectedClass);
-    }
-
-    const filteredAttendance = attendance.filter(a => {
-      const attendanceDate = new Date(a.date);
-      return attendanceDate >= startDate && attendanceDate <= endDate;
-    });
-
-    const studentStats = filteredStudents.map(student => {
-      const studentAttendance = filteredAttendance.filter(a => a.studentId === student.id);
-      const present = studentAttendance.filter(a => a.status === 'present').length;
-      const total = studentAttendance.length;
-      const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
-
-      return {
-        ...student,
-        present,
-        total,
-        percentage,
-        className: student.classId.replace('class_', 'Class '),
-      };
-    });
-
-    studentStats.sort((a, b) => {
-      const aNum = parseInt(a.id.replace(/\D/g, ''), 10) || 0;
-      const bNum = parseInt(b.id.replace(/\D/g, ''), 10) || 0;
-      return aNum - bNum;
-    });
-
-    setAttendanceData(studentStats);
-  };
-
-  const seededRandom = (seed: number) => {
-    const x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
   };
 
   const loadProgressData = () => {
-    let filteredStudents = [...students];
+    let filtered = [...allStudents];
     if (selectedClass !== 'all') {
-      filteredStudents = students.filter(s => s.classId === selectedClass);
+      filtered = allStudents.filter(s => s.classId === selectedClass);
     }
-    // Sort by numeric part of student ID
-    filteredStudents.sort((a, b) => {
-      const aNum = parseInt(a.id.replace(/\D/g, ''), 10) || 0;
-      const bNum = parseInt(b.id.replace(/\D/g, ''), 10) || 0;
-      return aNum - bNum;
+    // Sort by class then name
+    filtered.sort((a, b) => {
+      const aNum = parseInt(a.classId.replace(/\D/g, ''), 10) || 0;
+      const bNum = parseInt(b.classId.replace(/\D/g, ''), 10) || 0;
+      if (aNum !== bNum) return aNum - bNum;
+      return a.name.localeCompare(b.name);
     });
 
-    const progress = filteredStudents.map(student => {
-      const idNum = parseInt(student.id.replace(/\D/g, ''), 10) || 1;
-      const mathGrade = Math.floor(seededRandom(idNum * 3 + 1) * 40) + 60;
-      const englishGrade = Math.floor(seededRandom(idNum * 7 + 2) * 40) + 60;
-      const scienceGrade = Math.floor(seededRandom(idNum * 11 + 3) * 40) + 60;
+    // Build a map of studentId -> latest progress from backend
+    const progressMap = new Map<string, { [subject: string]: { marks: number; total: number } }>();
+    const progressRecords = allProgressData?.data || [];
+    progressRecords.forEach((record: any) => {
+      const sid = record.studentId;
+      if (!progressMap.has(sid)) progressMap.set(sid, {});
+      const subjectMap = progressMap.get(sid)!;
+      (record.subjects || []).forEach((s: any) => {
+        if (s.marksObtained !== null && s.marksObtained !== undefined) {
+          // Keep latest (overwrite with newer records)
+          subjectMap[s.subject] = { marks: s.marksObtained, total: s.totalMarks };
+        }
+      });
+    });
+
+    const progress: StudentStat[] = filtered.map((student) => {
+      const subjectData = progressMap.get(student.id);
+      const getSubjectPct = (name: string) => {
+        const d = subjectData?.[name];
+        return d && d.total > 0 ? Math.round((d.marks / d.total) * 100) : undefined;
+      };
+
+      const mathGrade = getSubjectPct('Math') ?? getSubjectPct('Mathematics');
+      const englishGrade = getSubjectPct('English');
+      const scienceGrade = getSubjectPct('Science');
+
+      // Build all subjects list for detailed view
+      const allSubjectsList = subjectData
+        ? Object.entries(subjectData).map(([name, d]) => ({
+            name,
+            pct: d.total > 0 ? Math.round((d.marks / d.total) * 100) : 0,
+          }))
+        : [];
+
+      // Compute average from all available subjects
+      const allSubjects = subjectData ? Object.values(subjectData) : [];
+      const avgGrade = allSubjects.length > 0
+        ? Math.round(allSubjects.reduce((sum, s) => sum + (s.marks / s.total) * 100, 0) / allSubjects.length)
+        : undefined;
+
       return {
-        ...student,
-        className: student.classId.replace('class_', 'Class '),
-        mathGrade,
-        englishGrade,
-        scienceGrade,
-        averageGrade: Math.round((mathGrade + englishGrade + scienceGrade) / 3),
+        id: student.id,
+        name: student.name,
+        classId: student.classId,
+        className: student.className,
+        present: 0,
+        total: 0,
+        percentage: 0,
+        mathGrade: mathGrade ?? 0,
+        englishGrade: englishGrade ?? 0,
+        scienceGrade: scienceGrade ?? 0,
+        averageGrade: avgGrade ?? 0,
+        allSubjects: allSubjectsList,
       };
     });
 
     setProgressData(progress);
-  };
-
-  const getClassOptions = () => {
-    return [
-      { id: 'all', name: 'All Classes' },
-      ...Array.from({ length: 12 }, (_, i) => ({
-        id: `class_${i + 1}`,
-        name: `Class ${i + 1}`,
-      })),
-    ];
   };
 
   const getDateRangeOptions = () => [
@@ -198,7 +351,7 @@ const StatisticsScreen = () => {
 
       {/* Attendance Summary */}
       <View style={styles.summarySection}>
-        <Text style={styles.sectionTitle}>Attendance Summary</Text>
+        <Text style={styles.sectionTitle}>Today's Attendance</Text>
         <View style={styles.summaryCards}>
           <StatCard
             title="Total Students"
@@ -207,22 +360,22 @@ const StatisticsScreen = () => {
             color="#2F6FED"
           />
           <StatCard
-            title="Avg Attendance"
-            value={`${attendanceData.length > 0 ? Math.round(attendanceData.reduce((sum, s) => sum + s.percentage, 0) / attendanceData.length) : 0}%`}
-            icon="📊"
+            title="Present"
+            value={attendanceData.filter(s => s.attendanceStatus === 'present').length}
+            icon="✅"
             color="#28A745"
           />
           <StatCard
-            title="Excellent (90%+)"
-            value={attendanceData.filter(s => s.percentage >= 90).length}
-            icon="⭐"
-            color="#28A745"
-          />
-          <StatCard
-            title="Needs Attention (<70%)"
-            value={attendanceData.filter(s => s.percentage < 70).length}
-            icon="⚠️"
+            title="Absent"
+            value={attendanceData.filter(s => s.attendanceStatus === 'absent').length}
+            icon="❌"
             color="#DC3545"
+          />
+          <StatCard
+            title="Not Marked"
+            value={attendanceData.filter(s => !s.attendanceStatus).length}
+            icon="⏳"
+            color="#FFC107"
           />
         </View>
       </View>
@@ -230,22 +383,19 @@ const StatisticsScreen = () => {
       {/* Attendance Chart */}
       <View style={styles.chartSection}>
         <Text style={styles.sectionTitle}>Attendance by Class</Text>
-        {Array.from({ length: 12 }, (_, i) => {
-          const className = `Class ${i + 1}`;
-          const classId   = `class_${i + 1}`;
-          const classStudents = attendanceData.filter(
-            s => s.className === className || s.classId === classId
-          );
-          const avgPercentage = classStudents.length > 0
-            ? Math.round(classStudents.reduce((sum, s) => sum + s.percentage, 0) / classStudents.length)
+        {getClassOptions().filter(opt => opt.id !== 'all').map(({ id: classId, name: className }) => {
+          const classStudents = attendanceData.filter(s => s.classId === classId);
+          const markedStudents = classStudents.filter(s => s.total > 0);
+          const avgPercentage = markedStudents.length > 0
+            ? Math.round(markedStudents.reduce((sum, s) => sum + s.percentage, 0) / markedStudents.length)
             : 0;
 
           return (
-            <View key={className} style={styles.chartItem}>
+            <View key={classId} style={styles.chartItem}>
               <View style={styles.chartHeader}>
-                <Text style={styles.chartLabel}>{className}</Text>
+                <Text style={styles.chartLabel}>{className} ({classStudents.length} students)</Text>
                 <Text style={[styles.chartValue, { color: getAttendanceColor(avgPercentage) }]}>
-                  {avgPercentage}%
+                  {markedStudents.length > 0 ? `${avgPercentage}%` : 'N/A'}
                 </Text>
               </View>
               <View style={styles.chartBar}>
@@ -269,7 +419,7 @@ const StatisticsScreen = () => {
         <Text style={styles.sectionTitle}>Student Attendance</Text>
         {attendanceData.map((student) => (
           <TouchableOpacity
-            key={student.id}
+            key={student.id || student._id}
             style={styles.studentCard}
             onPress={() => handleStudentPress(student)}
             accessibilityLabel={`${student.name}, ${student.percentage}% attendance`}
@@ -284,7 +434,9 @@ const StatisticsScreen = () => {
                 <Text style={styles.studentName}>{student.name}</Text>
                 <Text style={styles.studentClass}>{student.className} · ID: {student.id}</Text>
                 <Text style={styles.attendanceDetails}>
-                  {student.present} of {student.total} days
+                  {student.attendanceStatus
+                    ? student.attendanceStatus.charAt(0).toUpperCase() + student.attendanceStatus.slice(1)
+                    : 'Not marked'}
                 </Text>
               </View>
             </View>
@@ -342,32 +494,40 @@ const StatisticsScreen = () => {
       {/* Progress Summary */}
       <View style={styles.summarySection}>
         <Text style={styles.sectionTitle}>Academic Progress</Text>
-        <View style={styles.summaryCards}>
-          <StatCard
-            title="Total Students"
-            value={progressData.length}
-            icon="👥"
-            color="#2F6FED"
-          />
-          <StatCard
-            title="Avg Grade"
-            value={`${progressData.length > 0 ? Math.round(progressData.reduce((sum, s) => sum + s.averageGrade, 0) / progressData.length) : 0}%`}
-            icon="📈"
-            color="#28A745"
-          />
-          <StatCard
-            title="High Achievers (90%+)"
-            value={progressData.filter(s => s.averageGrade >= 90).length}
-            icon="⭐"
-            color="#28A745"
-          />
-          <StatCard
-            title="Needs Support (<70%)"
-            value={progressData.filter(s => s.averageGrade < 70).length}
-            icon="📚"
-            color="#DC3545"
-          />
-        </View>
+        {(() => {
+          const withData = progressData.filter(s => s.averageGrade > 0);
+          const avgGrade = withData.length > 0
+            ? Math.round(withData.reduce((sum, s) => sum + s.averageGrade, 0) / withData.length)
+            : 0;
+          return (
+            <View style={styles.summaryCards}>
+              <StatCard
+                title="Total Students"
+                value={progressData.length}
+                icon="👥"
+                color="#2F6FED"
+              />
+              <StatCard
+                title="Avg Grade"
+                value={withData.length > 0 ? `${avgGrade}%` : 'N/A'}
+                icon="📈"
+                color="#28A745"
+              />
+              <StatCard
+                title="High Achievers (90%+)"
+                value={withData.filter(s => s.averageGrade >= 90).length}
+                icon="⭐"
+                color="#28A745"
+              />
+              <StatCard
+                title="Needs Support (<70%)"
+                value={withData.filter(s => s.averageGrade > 0 && s.averageGrade < 70).length}
+                icon="📚"
+                color="#DC3545"
+              />
+            </View>
+          );
+        })()}
       </View>
 
       {/* Student Progress Cards */}
@@ -375,7 +535,7 @@ const StatisticsScreen = () => {
         <Text style={styles.sectionTitle}>Student Progress</Text>
         {progressData.map((student) => (
           <TouchableOpacity
-            key={student.id}
+            key={student.id || student._id}
             style={styles.progressCard}
             onPress={() => handleStudentPress(student)}
             accessibilityLabel={`${student.name}, average grade ${student.averageGrade}%`}
@@ -392,31 +552,65 @@ const StatisticsScreen = () => {
               </View>
             </View>
             <View style={styles.gradesContainer}>
-              <View style={styles.gradeItem}>
-                <Text style={styles.gradeLabel}>Math</Text>
-                <Text style={[styles.gradeValue, { color: getGradeColor(student.mathGrade) }]}>
-                  {student.mathGrade}%
-                </Text>
-              </View>
-              <View style={styles.gradeItem}>
-                <Text style={styles.gradeLabel}>English</Text>
-                <Text style={[styles.gradeValue, { color: getGradeColor(student.englishGrade) }]}>
-                  {student.englishGrade}%
-                </Text>
-              </View>
-              <View style={styles.gradeItem}>
-                <Text style={styles.gradeLabel}>Science</Text>
-                <Text style={[styles.gradeValue, { color: getGradeColor(student.scienceGrade) }]}>
-                  {student.scienceGrade}%
-                </Text>
-              </View>
-              <View style={[styles.gradeItem, styles.averageGrade]}>
-                <Text style={styles.gradeLabel}>Average</Text>
-                <Text style={[styles.gradeValue, { color: getGradeColor(student.averageGrade) }]}>
-                  {student.averageGrade}%
-                </Text>
-              </View>
+              {student.allSubjects && student.allSubjects.length > 0 ? (
+                <>
+                  {student.allSubjects.slice(0, 3).map((subj, i) => (
+                    <View key={i} style={styles.gradeItem}>
+                      <Text style={styles.gradeLabel} numberOfLines={1}>{subj.name}</Text>
+                      <Text style={[styles.gradeValue, { color: getGradeColor(subj.pct) }]}>
+                        {subj.pct}%
+                      </Text>
+                    </View>
+                  ))}
+                  <View style={[styles.gradeItem, styles.averageGrade]}>
+                    <Text style={styles.gradeLabel}>Average</Text>
+                    <Text style={[styles.gradeValue, { color: student.averageGrade ? getGradeColor(student.averageGrade) : '#999' }]}>
+                      {student.averageGrade ? `${student.averageGrade}%` : 'N/A'}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.gradeItem}>
+                    <Text style={styles.gradeLabel}>Math</Text>
+                    <Text style={[styles.gradeValue, { color: student.mathGrade ? getGradeColor(student.mathGrade) : '#999' }]}>
+                      {student.mathGrade ? `${student.mathGrade}%` : 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.gradeItem}>
+                    <Text style={styles.gradeLabel}>English</Text>
+                    <Text style={[styles.gradeValue, { color: student.englishGrade ? getGradeColor(student.englishGrade) : '#999' }]}>
+                      {student.englishGrade ? `${student.englishGrade}%` : 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.gradeItem}>
+                    <Text style={styles.gradeLabel}>Science</Text>
+                    <Text style={[styles.gradeValue, { color: student.scienceGrade ? getGradeColor(student.scienceGrade) : '#999' }]}>
+                      {student.scienceGrade ? `${student.scienceGrade}%` : 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={[styles.gradeItem, styles.averageGrade]}>
+                    <Text style={styles.gradeLabel}>Average</Text>
+                    <Text style={[styles.gradeValue, { color: student.averageGrade ? getGradeColor(student.averageGrade) : '#999' }]}>
+                      {student.averageGrade ? `${student.averageGrade}%` : 'N/A'}
+                    </Text>
+                  </View>
+                </>
+              )}
             </View>
+            {/* Show remaining subjects if more than 3 */}
+            {student.allSubjects && student.allSubjects.length > 3 && (
+              <View style={styles.extraGradesContainer}>
+                {student.allSubjects.slice(3).map((subj, i) => (
+                  <View key={i} style={styles.extraGradeItem}>
+                    <Text style={styles.gradeLabel} numberOfLines={1}>{subj.name}</Text>
+                    <Text style={[styles.gradeValue, { color: getGradeColor(subj.pct) }]}>
+                      {subj.pct}%
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </TouchableOpacity>
         ))}
       </View>
@@ -431,18 +625,18 @@ const StatisticsScreen = () => {
           <View style={styles.headerTop}>
             <Text style={styles.logo}>🏫 Kilbil School</Text>
             <View style={styles.headerRight}>
-              <Text style={styles.welcomeText}>Welcome, {(user as any)?.name?.split(' ')[0]}!</Text>
+              <Text style={styles.welcomeText}>Welcome, {(user?.fullName || (user as any)?.name || '').split(' ')[0]}!</Text>
               <AdminHeaderRight />
             </View>
           </View>
           <View style={styles.adminInfo}>
             <View style={styles.adminAvatarCircle}>
               <Text style={styles.adminAvatarInitials}>
-                {(user as any)?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'A'}
+                {(user?.fullName || (user as any)?.name || 'A').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
               </Text>
             </View>
             <View style={styles.adminDetails}>
-              <Text style={styles.adminName}>{(user as any)?.name}</Text>
+              <Text style={styles.adminName}>{user?.fullName || (user as any)?.name}</Text>
               <Text style={styles.adminRole}>School Administrator</Text>
             </View>
           </View>
@@ -471,7 +665,12 @@ const StatisticsScreen = () => {
         </View>
 
         {/* Tab Content */}
-        {activeTab === 'attendance' ? renderAttendanceTab() : renderProgressTab()}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#2F6FED" />
+            <Text style={styles.loadingText}>Loading statistics...</Text>
+          </View>
+        ) : activeTab === 'attendance' ? renderAttendanceTab() : renderProgressTab()}
       </ScrollView>
     </SafeAreaView>
   );
@@ -484,6 +683,16 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  loadingContainer: {
+    paddingVertical: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
   },
   header: {
     backgroundColor: '#2F6FED',
@@ -804,6 +1013,20 @@ const styles = StyleSheet.create({
   gradeValue: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  extraGradesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    gap: 4,
+  },
+  extraGradeItem: {
+    alignItems: 'center',
+    minWidth: '22%',
+    paddingVertical: 4,
   },
 });
 

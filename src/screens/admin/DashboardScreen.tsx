@@ -17,7 +17,8 @@ import AdminHeaderRight from '../../components/admin/AdminHeaderRight';
 import StatCard from '../../components/admin/StatCard';
 import PaymentRow from '../../components/admin/PaymentRow';
 import { Payment } from '../../components/admin/PaymentRow';
-import { useGetTeachersQuery } from '../../store/services/teachersApi';
+import { useGetTeachersQuery, useGetAllStudentsQuery } from '../../store/services/teachersApi';
+import { useGetAllPaymentsQuery } from '../../store/services/paymentsApi';
 import WelcomeCard from '../../components/WelcomeCard';
 import WelcomeCarouselModal from '../../components/WelcomeCarouselModal';
 import { trackWelcomeCardImpression } from '../../utils/analytics';
@@ -36,6 +37,8 @@ const DashboardScreen = () => {
   const { user } = useAuth();
   const { students, attendance, events, paymentsAdmin } = useData();
   const { data: teachersData, isLoading: teachersLoading } = useGetTeachersQuery();
+  const { data: allStudentsData } = useGetAllStudentsQuery();
+  const { data: allPaymentsData } = useGetAllPaymentsQuery();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({
     totalStudents: 0,
@@ -52,13 +55,13 @@ const DashboardScreen = () => {
   useEffect(() => {
     loadDashboardData();
     trackWelcomeCardImpression('admin');
-  }, [students, attendance, events, paymentsAdmin, teachersData]);
+  }, [students, attendance, events, paymentsAdmin, teachersData, allStudentsData, allPaymentsData]);
 
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      // Calculate total students
-      const totalStudents = students.length;
+      // Calculate total students - prefer API data over local
+      const totalStudents = allStudentsData?.data?.count || allStudentsData?.data?.students?.length || students.length;
 
       // Get total teachers from API
       const totalTeachers = teachersData?.data?.count || 0;
@@ -87,9 +90,11 @@ const DashboardScreen = () => {
         ? Math.round(attendancePercentages.reduce((sum, p) => sum + p, 0) / attendancePercentages.length)
         : 0;
 
-      // Calculate payments
-      const paymentsDue = paymentsAdmin.filter(p => p.status === 'due' || p.status === 'overdue').length;
-      const paymentsTotal = paymentsAdmin.length;
+      // Calculate payments - prefer API data
+      const apiPayments = allPaymentsData?.data?.payments || [];
+      const allPayments = apiPayments.length > 0 ? apiPayments : paymentsAdmin;
+      const paymentsDue = allPayments.filter((p: any) => p.status === 'due' || p.status === 'pending' || p.status === 'overdue').length;
+      const paymentsTotal = allPayments.length;
 
       // Calculate upcoming events (next 30 days)
       const nextMonth = new Date();
@@ -330,6 +335,69 @@ const DashboardScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Benefits Section */}
+        <View style={styles.comingSoonSection}>
+          <Text style={styles.sectionTitle}>Benefits</Text>
+          <View style={styles.comingSoonGrid}>
+            {[
+              { icon: '🏅', title: 'Sport Events', desc: 'Sports competitions and events for students' },
+              { icon: '🧠', title: 'IQ Challenges', desc: 'Brain teasers and IQ challenges for students' },
+              { icon: '🪪', title: 'Digital ID Card', desc: 'Digital ID card with live tracking or one time location' },
+              { icon: '🎓', title: 'Scholarship', desc: 'Scholarship from 1st to 10th for rank holders' },
+              { icon: '🏥', title: 'Medical Camp', desc: 'Regular medical camps for student health checkups' },
+              { icon: '🛡️', title: 'Health Cover / Insurance', desc: 'Health cover and insurance for students' },
+              { icon: '🎥', title: 'Webinar for Students', desc: "Webinar to understand children's growth for their bright future" },
+              { icon: '👨‍👩‍👧', title: 'Webinar for Parents', desc: "Webinar for parents to understand their children's growth and development" },
+            ].map((item, idx) => (
+              <View key={idx} style={styles.comingSoonCard}>
+                <Text style={styles.comingSoonIcon}>{item.icon}</Text>
+                <View style={styles.comingSoonContent}>
+                  <Text style={styles.comingSoonTitle}>{item.title}</Text>
+                  <Text style={styles.comingSoonDesc}>{item.desc}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Features of Kilbil School Application */}
+        <View style={styles.comingSoonSection}>
+          <Text style={styles.sectionTitle}>Features of Kilbil School Application</Text>
+          <View style={styles.comingSoonGrid}>
+            {[
+              { icon: '💬', title: 'Chats with Teachers & Parents', desc: 'Direct messaging between teachers and parents' },
+              { icon: '📍', title: 'Live Tracking of Students', desc: 'Monitor student locations in real-time' },
+              { icon: '🚌', title: 'Bus Live Tracking', desc: 'Track school buses in real-time' },
+              { icon: '💰', title: 'Financial Overview & Reporting', desc: 'Comprehensive financial dashboards with income, expenses' },
+              { icon: '🔗', title: 'Integration with Transport App', desc: 'Seamless integration with transport management' },
+              { icon: '📄', title: 'Document Management', desc: 'Centralized document storage for certificates and records' },
+              { icon: '🚨', title: 'Emergency Broadcast', desc: 'Send urgent notifications to all parents, teachers, and staff' },
+              { icon: '🗓️', title: 'Timetable & Curriculum Creation', desc: 'Create and manage class timetables and curriculum' },
+              { icon: '🔔', title: 'Bulk Notifications', desc: 'Send reminders or notifications individually or in bulk' },
+              { icon: '📊', title: 'Report Generation', desc: 'Generate detailed school reports' },
+              { icon: '📋', title: 'PTM Scheduler', desc: 'Schedule parent-teacher meetings easily' },
+              { icon: '📢', title: 'News & Announcement Feed', desc: 'Stay updated with school news and announcements' },
+              { icon: '📚', title: 'Study Material', desc: 'Share study materials with students' },
+              { icon: '🧩', title: 'IQ & Mystery Games', desc: 'Students play games and earn reward points' },
+              { icon: '🎁', title: 'Reward Points', desc: 'Students buy school items with earned reward points' },
+              { icon: '📝', title: 'Homework & Assignment Tracker', desc: 'Track daily homework and assignments' },
+              { icon: '⚠️', title: 'Behaviour & Incident Reporting', desc: 'Report and track student behaviour and incidents' },
+              { icon: '📂', title: 'File Sharing for Study Material', desc: 'Share PDFs and documents with students' },
+              { icon: '✅', title: 'Attendance Report', desc: 'Comprehensive attendance reports by class and student' },
+              { icon: '📈', title: 'Progress Report', desc: 'Monthly, unit test and term examination reports' },
+              { icon: '💳', title: 'Payment System', desc: 'Complete payment management with records and dues' },
+            ].map((item, idx) => (
+              <View key={idx} style={styles.comingSoonCard}>
+                <Text style={styles.comingSoonIcon}>{item.icon}</Text>
+                <View style={styles.comingSoonContent}>
+                  <Text style={styles.comingSoonTitle}>{item.title}</Text>
+                  <Text style={styles.comingSoonDesc}>{item.desc}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
       </ScrollView>
 
       <WelcomeCarouselModal
@@ -544,6 +612,64 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.2,
     lineHeight: 18,
+  },
+  comingSoonSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  comingSoonSubtitle: {
+    fontSize: 14,
+    color: '#888',
+    marginBottom: 12,
+    marginTop: -10,
+    fontStyle: 'italic',
+  },
+  comingSoonGrid: {
+    gap: 12,
+  },
+  comingSoonCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  comingSoonIcon: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  comingSoonContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  comingSoonTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+  },
+  comingSoonDesc: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  comingSoonBadge: {
+    backgroundColor: '#FFF3CD',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  comingSoonBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#856404',
   },
 });
 

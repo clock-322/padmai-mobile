@@ -89,13 +89,44 @@ const cals = StyleSheet.create({
 });
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../providers/DataProvider';
+import { useGetAllStudentsQuery } from '../../store/services/teachersApi';
+import { useAddPaymentMutation, useGetAllPaymentsQuery } from '../../store/services/paymentsApi';
 import AdminHeaderRight from '../../components/admin/AdminHeaderRight';
 import PaymentRow from '../../components/admin/PaymentRow';
 import { Payment } from '../../components/admin/PaymentRow';
 
 const PaymentsScreen = () => {
   const { user } = useAuth();
-  const { paymentsAdmin, students, addPayment, updatePaymentStatus } = useData();
+  const { paymentsAdmin, students: localStudents, addPayment, updatePaymentStatus } = useData();
+  const { data: apiStudentsData } = useGetAllStudentsQuery();
+  const { data: apiPaymentsData, refetch: refetchPayments } = useGetAllPaymentsQuery();
+  const [addPaymentApi] = useAddPaymentMutation();
+
+  // Merge API students with local students; API students take priority
+  const students = React.useMemo(() => {
+    const apiStudents = apiStudentsData?.data?.students ?? [];
+    if (apiStudents.length > 0) {
+      return apiStudents.map(s => ({
+        id: s._id,
+        name: `${s.firstName} ${s.lastName}`,
+        classId: `class_${s.class}`,
+        parentId: s.parentId || '',
+        section: s.section,
+        rollNo: s.classRollNo || '',
+        classNum: s.class || '',
+      }));
+    }
+    return localStudents.map(s => ({ ...s, rollNo: '', classNum: s.classId?.replace('class_', '') || '' }));
+  }, [apiStudentsData, localStudents]);
+
+  // Build student lookup for quick access to class/rollNo info
+  const studentLookup = React.useMemo(() => {
+    const map = new Map<string, { classId: string; classNum: string; rollNo: string; section: string }>();
+    students.forEach(s => {
+      map.set(s.id, { classId: s.classId, classNum: (s as any).classNum || '', rollNo: (s as any).rollNo || '', section: (s as any).section || '' });
+    });
+    return map;
+  }, [students]);
   const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -111,12 +142,38 @@ const PaymentsScreen = () => {
     sendReminder: false,
   });
 
+  // Merge local payments with backend API payments
+  const allPayments = React.useMemo(() => {
+    const localIds = new Set(paymentsAdmin.map(p => p.id));
+    const merged: Payment[] = [...paymentsAdmin];
+
+    // Add backend payments that don't exist locally
+    const apiPayments = apiPaymentsData?.data?.payments || [];
+    apiPayments.forEach((ap: any) => {
+      const apiId = ap._id || ap.id;
+      if (!localIds.has(apiId)) {
+        merged.push({
+          id: apiId,
+          parentId: '',
+          parentName: ap.studentName || '',
+          studentId: ap.studentId || '',
+          studentName: ap.studentName || '',
+          amount: ap.amount || 0,
+          dueDate: ap.dueDate || ap.createdAt || '',
+          status: ap.status || 'due',
+          reminders: 0,
+        });
+      }
+    });
+    return merged;
+  }, [paymentsAdmin, apiPaymentsData]);
+
   useEffect(() => {
     loadPayments();
-  }, [paymentsAdmin, searchQuery, statusFilter]);
+  }, [allPayments, searchQuery, statusFilter]);
 
   const loadPayments = () => {
-    let filtered = [...paymentsAdmin];
+    let filtered = [...allPayments];
 
     // Apply status filter
     if (statusFilter !== 'all') {
@@ -126,9 +183,9 @@ const PaymentsScreen = () => {
     // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(p => 
-        p.parentName.toLowerCase().includes(query) ||
-        p.studentName.toLowerCase().includes(query) ||
+      filtered = filtered.filter(p =>
+        p.parentName?.toLowerCase().includes(query) ||
+        p.studentName?.toLowerCase().includes(query) ||
         p.reference?.toLowerCase().includes(query)
       );
     }
@@ -159,7 +216,7 @@ const PaymentsScreen = () => {
     setAddModalVisible(true);
   };
 
-  const confirmAddPayment = () => {
+  const confirmAddPayment = async () => {
     if (!newPayment.studentId || !newPayment.amount || !newPayment.dueDate) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
@@ -169,20 +226,39 @@ const PaymentsScreen = () => {
       Alert.alert('Error', 'Student not found');
       return;
     }
+    const amount = parseInt(newPayment.amount, 10);
     const payment = {
       id: `pay_${Date.now()}`,
       parentId: student.parentId || '',
       parentName: '',
       studentId: student.id,
       studentName: student.name,
-      amount: parseInt(newPayment.amount, 10),
+      amount,
       dueDate: newPayment.dueDate,
       status: newPayment.status,
       reminders: newPayment.sendReminder ? 1 : 0,
     };
     addPayment(payment);
+
+    // Also save to backend API so parents can see the payment
+    try {
+      await addPaymentApi({
+        studentId: student.id,
+        studentName: student.name,
+        className: student.classId?.replace('class_', 'Class ') || '',
+        name: `Payment - ${newPayment.dueDate}`,
+        amount,
+        paymentType: 'fee',
+        dueDate: newPayment.dueDate,
+        status: newPayment.status,
+      }).unwrap();
+      refetchPayments();
+    } catch (err) {
+      console.warn('Failed to sync payment to server (saved locally):', err);
+    }
+
     setAddModalVisible(false);
-    Alert.alert('Success', `Payment of ₹${payment.amount} added for ${student.name}${newPayment.sendReminder ? '\nReminder will be sent.' : ''}`);
+    Alert.alert('Success', `Payment of ₹${amount} added for ${student.name}${newPayment.sendReminder ? '\nReminder will be sent.' : ''}`);
   };
 
   const handleSendReminder = (payment: Payment) => {
@@ -201,10 +277,10 @@ const PaymentsScreen = () => {
 
   const getStatusCounts = () => {
     const counts = {
-      all: paymentsAdmin.length,
-      due: paymentsAdmin.filter(p => p.status === 'due').length,
-      paid: paymentsAdmin.filter(p => p.status === 'paid').length,
-      overdue: paymentsAdmin.filter(p => p.status === 'overdue').length,
+      all: allPayments.length,
+      due: allPayments.filter(p => p.status === 'due').length,
+      paid: allPayments.filter(p => p.status === 'paid').length,
+      overdue: allPayments.filter(p => p.status === 'overdue').length,
     };
     return counts;
   };
@@ -288,15 +364,45 @@ const PaymentsScreen = () => {
             </TouchableOpacity>
           </View>
           {filteredPayments.length > 0 ? (
-            filteredPayments.map((payment) => (
-              <PaymentRow
-                key={payment.id}
-                payment={payment}
-                onMarkReceived={handleMarkReceived}
-                onSendReminder={handleSendReminder}
-                onViewHistory={handleViewHistory}
-              />
-            ))
+            // Sort by class number then student name
+            [...filteredPayments]
+              .sort((a, b) => {
+                const aInfo = studentLookup.get(a.studentId);
+                const bInfo = studentLookup.get(b.studentId);
+                const aClass = parseInt(aInfo?.classNum || '0', 10);
+                const bClass = parseInt(bInfo?.classNum || '0', 10);
+                if (aClass !== bClass) return aClass - bClass;
+                return (a.studentName || '').localeCompare(b.studentName || '');
+              })
+              .map((payment, idx, arr) => {
+                const info = studentLookup.get(payment.studentId);
+                const prevInfo = idx > 0 ? studentLookup.get(arr[idx - 1].studentId) : null;
+                const showClassHeader = !prevInfo || prevInfo.classId !== info?.classId;
+                return (
+                  <View key={payment.id}>
+                    {showClassHeader && info?.classNum ? (
+                      <View style={styles.classGroupHeader}>
+                        <Text style={styles.classGroupTitle}>
+                          Class {info.classNum}{info.section ? ` - Section ${info.section}` : ''}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {info?.rollNo || info?.classNum ? (
+                      <View style={styles.studentInfoBar}>
+                        <Text style={styles.studentInfoText}>
+                          Roll No: {info.rollNo || 'N/A'} | ID: {payment.studentId.slice(-8)}
+                        </Text>
+                      </View>
+                    ) : null}
+                    <PaymentRow
+                      payment={payment}
+                      onMarkReceived={handleMarkReceived}
+                      onSendReminder={handleSendReminder}
+                      onViewHistory={handleViewHistory}
+                    />
+                  </View>
+                );
+              })
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateIcon}>💳</Text>
@@ -325,21 +431,30 @@ const PaymentsScreen = () => {
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <Text style={styles.inputLabel}>Student</Text>
             <ScrollView style={styles.studentPicker} nestedScrollEnabled>
-              {students.sort((a, b) => {
-                const aNum = parseInt(a.id.replace(/\D/g, ''), 10) || 0;
-                const bNum = parseInt(b.id.replace(/\D/g, ''), 10) || 0;
-                return aNum - bNum;
-              }).map(s => (
-                <TouchableOpacity
-                  key={s.id}
-                  style={[styles.studentPickerItem, newPayment.studentId === s.id && styles.studentPickerItemSelected]}
-                  onPress={() => setNewPayment(prev => ({ ...prev, studentId: s.id }))}
-                >
-                  <Text style={[styles.studentPickerText, newPayment.studentId === s.id && styles.studentPickerTextSelected]}>
-                    {s.id} — {s.name} ({s.classId.replace('class_', 'Class ')})
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {students.length === 0 ? (
+                <View style={styles.studentPickerItem}>
+                  <Text style={styles.studentPickerText}>No students found</Text>
+                </View>
+              ) : (
+                [...students]
+                  .sort((a, b) => {
+                    const aClass = parseInt((a as any).classNum || '0', 10);
+                    const bClass = parseInt((b as any).classNum || '0', 10);
+                    if (aClass !== bClass) return aClass - bClass;
+                    return a.name.localeCompare(b.name);
+                  })
+                  .map((s, idx) => (
+                  <TouchableOpacity
+                    key={s.id || `s-${idx}`}
+                    style={[styles.studentPickerItem, newPayment.studentId === s.id && styles.studentPickerItemSelected]}
+                    onPress={() => setNewPayment(prev => ({ ...prev, studentId: s.id }))}
+                  >
+                    <Text style={[styles.studentPickerText, newPayment.studentId === s.id && styles.studentPickerTextSelected]}>
+                      {s.name} (Class {(s as any).classNum || s.classId.replace('class_', '')}{(s as any).rollNo ? ` | Roll: ${(s as any).rollNo}` : ''})
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
             </ScrollView>
             <Text style={styles.inputLabel}>Amount (₹)</Text>
             <TextInput
@@ -614,7 +729,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   studentPicker: {
-    maxHeight: 130,
+    maxHeight: 180,
     borderWidth: 1.5,
     borderColor: '#dee2e6',
     borderRadius: 10,
@@ -828,6 +943,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  classGroupHeader: {
+    backgroundColor: '#2F6FED',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  classGroupTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  studentInfoBar: {
+    backgroundColor: '#f0f4ff',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  studentInfoText: {
+    fontSize: 12,
+    color: '#2F6FED',
+    fontWeight: '600',
   },
 });
 
